@@ -1,5 +1,10 @@
 #include "parser.h"
+#ifdef _WIN32
+#include <process.h>
+#endif /* _WIN32 */
+#include <errno.h>
 
+#define DV_DEFAULT_VIEWER "xv"
 
 Var *
 ff_display(vfuncptr func, Var *arg)
@@ -11,6 +16,7 @@ ff_display(vfuncptr func, Var *arg)
     int bands;
     char buf[256];
     int max,r,g,b;
+	char *viewer = NULL;
 
     struct keywords kw[] = {
 	{ "object", NULL },
@@ -99,9 +105,20 @@ ff_display(vfuncptr func, Var *arg)
 	}
 	fclose(fp);
     }
-    sprintf(buf, "xv %s &", fname);
+
+    viewer=getenv("DV_VIEWER");
+    if (viewer == NULL){ viewer=DV_DEFAULT_VIEWER; }
+    sprintf(buf, "%s %s &", viewer, fname);
     free(fname);
+#ifdef _WIN32
+    if (_spawnlp(_P_NOWAIT, viewer, viewer, fname, NULL) == -1){
+       parse_error("Error spawning the viewer %s. Reason: %s.",
+          viewer, strerror(errno));
+       return(NULL);
+    }
+#else
     system(buf);
+#endif /* _WIN32 */
 
     return(NULL);
 }
