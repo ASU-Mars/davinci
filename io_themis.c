@@ -8,18 +8,20 @@
 #include <sys/mman.h>
 #endif
 
-#define	_IMAGEID	2
-#define	_BANDS	3
-#define	_FRAMES	4
-#define  _DATA		6
-#define 	_SIGINFO	8
-#define	MAXDATA	320
-#define	MINDATA	128
-#define NUMBER_OF_GUESSES 4
-#define	INVALID_DATA	0
-#define VIS_WIDTH 1024
-#define VIS_TEST_WIDTH 1032
+#define	_IMAGEID				2
+#define	_BANDS				3
+#define	_FRAMES				4
+#define  _DATA					6
+#define 	_SIGINFO				8
+#define	MAXDATA				320
+#define	MINDATA				128
+#define NUMBER_OF_GUESSES 	4
+#define	INVALID_DATA		0
+#define VIS_WIDTH 			1024
+#define VIS_TEST_WIDTH 		1032
+#define FRAMELET_HEIGHT		192
 
+char *vis_bands[]={"Band_860","Band_425","Band_650","Band_750","Band_550"};
 int Compressed;
 
 typedef unsigned short uint16;
@@ -82,6 +84,14 @@ unsigned int StopStart_Sync = {0x8CABCAF0};
 extern unsigned char *Themis_Entry(unsigned char*, int *);
 #endif
 
+extern unsigned char * read_predictive(FILE *infile, 
+													int *total_size, 
+													int db, 
+													int size_guess);
+
+extern unsigned char * read_DCT(FILE *infile, 
+											int *total_size, 
+											int guess_size);
 
 
 int 
@@ -277,12 +287,51 @@ int GetGSEHeader (FILE *fp, struct _iheader *h)
     return (1);
 }
 
+int
+Count_Out_Bands(int b)
+{
+	int i;
+	int nob=0;
+
+	int bands;	
+
+	char plural=' ';
+
+	bands=((b >> 8) & 0x1f); 	
+
+	for (i=0;i<5;i++){
+		if ((bands & (1 << i)))
+			nob++;
+	}
+
+	if (nob==0){
+		parse_error("This is a snapshot and contains all bands");
+		return(0);
+	}
+
+	if (nob > 1)
+		plural='s';
+
+	parse_error("This image contains %d band%c:",nob,plural);
+
+	for (i=0;i<5;i++){
+		if ((bands & (1 << i)))
+			parse_error("%s",vis_bands[i]);
+	}
+
+	return(nob);
+}
+
+
+
+
 
 int
-Process_SC_Vis(FILE *infile,unsigned char **data,int *vis_width)
+Process_SC_Vis(FILE *infile,unsigned char **data,int *vis_width, int *nob)
 {
 	int i;
 	msdp_Header	mh;
+	msdp_Header	first_mh;
 	int count;
 	FILE *fp=infile;
 	int height=0;
@@ -298,20 +347,26 @@ Process_SC_Vis(FILE *infile,unsigned char **data,int *vis_width)
 	int	chunk_len;
 	unsigned int xcomp, pcomp, spacing, levels;
 	int huffman_table;
+	int quiet=0;
 
-	count=fread(&mh,sizeof(msdp_Header),1,fp);
+/* Read the 1st header for set-up perposes */
+
+	count=fread(&first_mh,sizeof(msdp_Header),1,fp);
 	if (!count)
 		return(0);
-	if (mh.bands==0)
+	if (first_mh.bands==0)
 		width=VIS_TEST_WIDTH;
 	else
 		width=VIS_WIDTH;
 
 	*vis_width=width;
 
+	*nob=Count_Out_Bands((int)first_mh.bands);
+	
 	rewind(fp);
 
-
+/* Now Take a run through the file to collect ALL header info which will tell us the size
+*/
 	while(1) {
 		count=fread(&mh,sizeof(msdp_Header),1,fp);
 		if (!(count))
@@ -328,55 +383,171 @@ Process_SC_Vis(FILE *infile,unsigned char **data,int *vis_width)
 	}
 
 	if ((height*width) != size) {
-		parse_error("Height*Width doesn't equate to size: %d vs %d\n",(height*width),size);
+/*		parse_error("Height*Width doesn't equate to size: %d vs %d\n",(height*width),size);*/
 		size=((height*width) > size ? (height*width):(size));
 		height=size/width; /*We took the larger of the two
 								sizes, need to correct for height*/
+		
 	}
-	*data=(unsigned char *)calloc(size,sizeof(char));
+
+	size+=1024; /*for the header*/
 
 	rewind(fp);
 
-	while (1) {
-		count=fread(&mh,sizeof(msdp_Header),1,fp);
-		if (!(count))
-			break;
-
-		swab((char *)&mh,(char *)&mh,sizeof(msdp_Header));
-		frag=(mh.len_lo | (mh.len_hi << 16));
-		swab((char *)&mh,(char *)&mh,sizeof(msdp_Header));
-
-		if(in_chunk!=NULL)
-			free(in_chunk);
-		in_chunk=(unsigned char *)calloc(frag,sizeof(char));
-		fread(in_chunk,frag,sizeof(char),fp);
-
-/*decode frag if necessary; offline for now
-
-		xcomp = (mh.comp[0] >> 2) & 3;
-		pcomp = (mh.comp[0] & 3);
-		spacing = mh.comp[4] | (mh.comp[5] << 8);
-		levels = (mh.comp[1] >> 5)+1;
-		huffman_table = mh.comp[1]&0xf;
-
-
-		if (xcomp || pcomp) {
-			out_chunk=decode_chunk(,,,);
-			memcpy((*data+idx),out_chunk,chunk_len);
-			idx+=chunk_len;
-		}
-
-		else {
-			memcpy((*data+idx),in_chunk,frag);
-			idx+=frag;
-		}
+/*  Okay, now we know how big it is, we can also figure out if it's compressed and
+**  if so, by which method.  Having determined this, we call the appropriate 
+**  data_read routine and return the buffer
 */
-		memcpy((*data+idx),in_chunk,frag);
-		idx+=frag;
-      fread(&dummy,1,1,fp);
-    }
+
+	if (first_mh.comp[0]==1) { /*Predictively Compressed*/
+		 parse_error("Reading Predictively Compressed Image");
+
+#ifdef HAVE_LIBMSSS_VIS
+		*data=read_predictive(infile,&size,quiet,size);
+		height=(size-1024)/width; /*Subtract off the header bytes which are added in durring the read*/
+
+#else
+		parse_error("Sorry, you do not have the correct decompression library for this file...aborting");
+		return(0);
+#endif
+
+	}
+
+
+	else if (first_mh.comp[0]==8) {  /* DCT Compressed */
+		 parse_error("Reading DCT Compressed Image");
+
+#ifdef HAVE_LIBMSSS_VIS
+		 *data=read_DCT(infile,&size,size);
+		 height=size/width; 
+		 size+=1024;/*Pad size, this routine doesn't add the 1024, so we gotta fake it for below*/
+#else
+		 parse_error("Sorry, you do not have the correct decompression library for this file...aborting");
+		 return(0);
+#endif
+
+	}
+
+
+	else {
+		  /* Raw data: Just read it on in...*/
+			 parse_error("Reading Raw Image");
+			 idx=1024;
+			 *data=(unsigned char *)calloc(size,sizeof(char));
+			  while (1) {
+				  count=fread(&mh,sizeof(msdp_Header),1,fp);
+				  if (!(count))
+					  break;
+
+				  swab((char *)&mh,(char *)&mh,sizeof(msdp_Header));
+				  frag=(mh.len_lo | (mh.len_hi << 16));
+				  swab((char *)&mh,(char *)&mh,sizeof(msdp_Header));
+
+				  if(in_chunk!=NULL)
+					  free(in_chunk);
+				  in_chunk=(unsigned char *)calloc(frag,sizeof(char));
+				  fread(in_chunk,frag,sizeof(char),fp);
+				  memcpy((*data+idx),in_chunk,frag);
+				  idx+=frag;
+		      fread(&dummy,1,1,fp);
+   		 }
+	}
+		
+
+	memmove(*data,(*data+1024),(size-1024));
+	*data=realloc(*data,(size-1024));
 
     return(height);
+}
+
+Var *Make_Vis_Cube(int nob, int height, int width, unsigned char *buf)
+{
+	int ramp;
+	int start;
+	int i,k;
+	int framelets;
+	int fh=FRAMELET_HEIGHT;
+	int fc;
+	int entries;
+	int divider;
+	int buf_idx;
+	int *bin_idx;
+	int fl;
+	int rd;
+
+	unsigned char *cube;
+
+	if (nob==0 || nob==1) /*Only one image plane*/
+		return(newVal(BSQ,width,height,1,BYTE,buf));
+
+
+	ramp= (nob > 3 ? 3:nob);
+	rd = (nob > 2 ? 6:3);
+
+	fl=framelets=height/fh;	/*How many individual frame-segments (framelets) in the images*/
+									/*fl is how many framelets left*/
+	entries=framelets/nob; /*How many framelets for each band*/
+	divider=height/nob*width; /*divider * band#-1 will be the starting address of each band in the linear array*/
+
+	fc=fh*width; /*This is the size in bytes of a framelet*/
+
+	cube=(unsigned char  *) malloc(height*width);
+	bin_idx=(int *)calloc(sizeof(int),nob);
+	memset(bin_idx,0x0,(nob*sizeof(int)));
+
+/*ramp up*/
+	buf_idx=0;
+	for (i=1;i<=ramp;i++){
+		for(k=0;k<i;k++){
+			memcpy((cube+(divider*k)+bin_idx[k]),(buf+buf_idx),fc);
+			buf_idx+=fc;
+			bin_idx[k]+=fc;
+			fl--;
+		}
+	}
+
+	if ((fl-rd)) { /* After ramp-up and ramp-down, 
+							there are still framelets, these are middle section
+							do them next */
+
+
+		if (nob < 4) { /* we'll get a repeating pattern of n,n+1[,n+2];n,n+1[,n+2];etc*/
+			for (i=0;i<((fl-rd)/nob);i++){
+				for(k=0;k<nob;k++){
+					memcpy((cube+(divider*k)+bin_idx[k]),(buf+buf_idx),fc);
+					buf_idx+=fc;
+					bin_idx[k]+=fc;
+				}
+			}
+		}
+
+		else { /*rolling pattern n,n+1,n+2;n+1,n+2,n+3;etc */
+			start=1;
+			for (i=0;i<((fl-rd)/3);i++){
+				for(k=0;k<3;k++){
+					memcpy((cube+(divider*(start+k))+bin_idx[(start+k)]),(buf+buf_idx),fc);
+					buf_idx+=fc;
+					bin_idx[(start+k)]+=fc;
+				}
+				start++;
+			}
+		}
+
+	}
+/*ramp down*/
+	start= (nob > 3 ? (nob-2):1);
+	for(i=start;i<=nob;i++){
+		for(k=(i-1);k<nob;k++){
+			memcpy((cube+(divider*k)+bin_idx[k]),(buf+buf_idx),fc);
+			buf_idx+=fc;
+			bin_idx[k]+=fc;
+		}
+	}
+
+	free(buf);
+	return(newVal(BSQ,width,(divider/width),nob,BYTE,cube));
+
+
 }
 
 Var *ff_GSE_VIS_Read(vfuncptr func, Var * arg)
@@ -390,14 +561,17 @@ Var *ff_GSE_VIS_Read(vfuncptr func, Var * arg)
     int ac;
     int height;
     int width=VIS_WIDTH;
+	 int nob;
     Var **av, *v;
     char	*filename,*fname,fname2[256];
     unsigned char *buf;
+	 int nocube=0;
 
-    Alist alist[333];
+    Alist alist[4];
     alist[0] = make_alist("filename", ID_STRING, NULL, &filename);
     alist[1] = make_alist("gse", INT, NULL, &gse);
-    alist[2].name = NULL;
+    alist[2] = make_alist("nocube", INT, NULL, &nocube);
+    alist[3].name = NULL;
 
 
     make_args(&ac, &av, func, arg);
@@ -441,14 +615,18 @@ Var *ff_GSE_VIS_Read(vfuncptr func, Var * arg)
     }
 
     else {
-        height=Process_SC_Vis(infile,&buf,&width);
-        return(newVal(BSQ,width,height,1,BYTE,buf));
+        height=Process_SC_Vis(infile,&buf,&width,&nob);
+		  if (height) {
+				if (nocube)
+      			return(newVal(BSQ,width,height,1,BYTE,buf));
+				else
+					return(Make_Vis_Cube(nob,height,width,buf));
+		  }
+
+		  else 
+			return(NULL);
     }
-	
-
 }
-
-
 
 
 Var *
