@@ -901,7 +901,7 @@ AU_DEFUN([jm_MAINTAINER_MODE], [AM_MAINTAINER_MODE])
 # libtool.m4 - Configure libtool for the host system. -*-Autoconf-*-
 
 # serial 47 AC_PROG_LIBTOOL
-# Debian $Rev: 74 $
+# Debian $Rev$
 
 
 # AC_PROVIDE_IFELSE(MACRO-NAME, IF-PROVIDED, IF-NOT-PROVIDED)
@@ -6817,7 +6817,7 @@ AC_MSG_RESULT([$SED])
 
 
 # serial 6 AC_LIB_LTDL
-# Debian $Rev: 42 $
+# Debian $Rev$
 
 # AC_WITH_LTDL
 # ------------

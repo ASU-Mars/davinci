@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT(davinci, m4_esyscmd([grep 'daVinci Version #' version.h | sed -e 's/\(.*\)#\(.*\)";/\2/' | tr -d '\n']), [davinci-dev@mars.asu.edu])
+AC_INIT(davinci, m4_esyscmd([grep 'davinci ' version.h | sed -e 's/\(.*\) \(.*\)";/\2/' | tr -d '\n']), [davinci-dev@mars.asu.edu])
 
 
 
@@ -28,7 +28,9 @@ AM_CONFIG_HEADER(config.h)
 
 
 dnl Check for some required programs.
-AC_PROG_CC
+dnl NOTE(rswinkle) it's 2016, every compiler supports C99 and we really need it
+AC_PROG_CC_C99
+
 AC_PROG_CPP
 AC_PROG_CXX
 dnl AC_PROG_YACC
@@ -256,7 +258,10 @@ else
 fi
 AC_CHECK_LIB(hdf5, H5open,[have_libhdf=yes],[have_libhdf=no])
 
-
+## force HDF5 version 1.8
+if test "x$have_libhdf" = "xyes"; then
+	AC_DEFINE(H5_USE_18_API, 1, [use HDF5 1.8 API])
+fi
 
 AC_CHECK_LIB([curl],[curl_easy_init])
 

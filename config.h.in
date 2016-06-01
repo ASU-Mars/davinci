@@ -15,6 +15,9 @@
 /* Path to gnuplot program for plot() function */
 #undef GPLOT_CMD
 
+/* use HDF5 1.8 API */
+#undef H5_USE_18_API
+
 /* Use aqua instead of X11 */
 #undef HAVE_AQUA
 
@@ -135,9 +138,6 @@
 
 /* Define to 1 if you have the `Xt' library (-lXt). */
 #undef HAVE_LIBXT
-
-/* Define to 1 if you have the `z' library (-lz). */
-#undef HAVE_LIBZ
 
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
