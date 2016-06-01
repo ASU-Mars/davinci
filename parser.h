@@ -1,4 +1,3 @@
-/******************************* parser .h *******************************/
 #ifndef PARSER_H
 #define PARSER_H
 
@@ -263,8 +262,8 @@ enum {
 
 	ID_LINE,           /* A lexical token */
 
-	ID_MODULE,         /* daVinci module variable ID */
-	ID_FUNCTION,       /* daVinci module function variable ID */
+	ID_MODULE,         /* davinci module variable ID */
+	ID_FUNCTION,       /* davinci module function variable ID */
 	ID_PARALLEL,       /* parallelization */
 	ID_VARARGS,        /* varargs arguments */
 

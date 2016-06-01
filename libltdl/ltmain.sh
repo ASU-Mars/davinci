@@ -56,7 +56,7 @@ modename="$progname"
 PROGRAM=ltmain.sh
 PACKAGE=libtool
 VERSION=1.5.0a
-TIMESTAMP=" (1.1220.2.25 2003/08/01 19:08:35) Debian$Rev: 49 $"
+TIMESTAMP=" (1.1220.2.25 2003/08/01 19:08:35) Debian$Rev$"
 
 default_mode=
 help="Try \`$progname --help' for more information."
