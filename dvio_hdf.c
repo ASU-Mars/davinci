@@ -39,6 +39,7 @@ void WriteHDF5(hid_t parent, char* name, Var* v)
 
 	if (parent < 0) {
 		top    = 1;
+		//TODO(rswinkle) find the function that validates name (ie makes it a valid identifier)
 		parent = H5Fcreate(name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 	}
 
@@ -46,10 +47,9 @@ void WriteHDF5(hid_t parent, char* name, Var* v)
 	case ID_STRUCT: {
 		Var* d;
 		char* n;
-		/*
-		** member is a structure.  We need to create a sub-group
-		** with this name.
-		*/
+
+		// member is a structure.  We need to create a sub-group
+		// with this name.
 		if (top == 0) {
 			child = H5Gcreate(parent, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 		} else {
@@ -65,65 +65,41 @@ void WriteHDF5(hid_t parent, char* name, Var* v)
 
 	case ID_VAL:
 
-		/*
-		** member is a value.  Create a dataset
-		*/
+		// member is a value.  Create a dataset
 		for (i = 0; i < 3; i++) {
-			size[i] = V_SIZE(v)[i];
+			size[2-i] = V_SIZE(v)[i];
 		}
 		org       = V_ORG(v);
 		dataspace = H5Screate_simple(3, size, NULL);
 
-		// why are we always storing them as BE?  seems arbitrary to me
-		// since we can read both and BE will almost always require conversion both
-		// ways because who runs BE machines these days?
-		// We should just store them as the native format, shorter, simpler code
 		switch (V_FORMAT(v)) {
-		case BYTE:
-			datatype        = H5Tcopy(H5T_STD_U8BE);
-			native_datatype = H5Tget_native_type(H5T_STD_U8BE, H5T_DIR_ASCEND);
-			break;
-		case SHORT:
-			datatype        = H5Tcopy(H5T_STD_I16BE);
-			native_datatype = H5Tget_native_type(H5T_STD_I16BE, H5T_DIR_ASCEND);
-			break;
-		case USHORT:
-			datatype        = H5Tcopy(H5T_STD_U16BE);
-			native_datatype = H5Tget_native_type(H5T_STD_U16BE, H5T_DIR_ASCEND);
-			break;
-		case INT:
-			datatype        = H5Tcopy(H5T_STD_I32BE);
-			native_datatype = H5Tget_native_type(H5T_STD_I32BE, H5T_DIR_ASCEND);
-			break;
-		case FLOAT:
-			datatype        = H5Tcopy(H5T_IEEE_F32BE);
-			native_datatype = H5Tget_native_type(H5T_IEEE_F32BE, H5T_DIR_ASCEND);
-			break;
-		case DOUBLE:
-			datatype        = H5Tcopy(H5T_IEEE_F64BE);
-			native_datatype = H5Tget_native_type(H5T_IEEE_F64BE, H5T_DIR_ASCEND);
-			break;
+		case BYTE: datatype   = H5Tcopy(H5T_NATIVE_UCHAR); break;
+		case SHORT: datatype  = H5Tcopy(H5T_NATIVE_SHORT); break;
+		case USHORT: datatype = H5Tcopy(H5T_NATIVE_USHORT); break;
+		case INT: datatype    = H5Tcopy(H5T_NATIVE_INT); break;
+		case FLOAT: datatype  = H5Tcopy(H5T_NATIVE_FLOAT); break;
+		case DOUBLE: datatype = H5Tcopy(H5T_NATIVE_DOUBLE); break;
 		}
 
-		/*
-		** Enable chunking and compression - JAS
-		*/
+		// Enable chunking and compression - JAS
 		plist = H5Pcreate(H5P_DATASET_CREATE);
 		H5Pset_chunk(plist, 3, size);
 		H5Pset_deflate(plist, HDF5_COMPRESSION_LEVEL);
 
 		dataset = H5Dcreate(parent, name, datatype, dataspace, H5P_DEFAULT, plist, H5P_DEFAULT);
-		H5Dwrite(dataset, native_datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, V_DATA(v));
-		H5Tclose(native_datatype);
+		H5Dwrite(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, V_DATA(v));
+		//H5Tclose(native_datatype);
 
 		aid2 = H5Screate(H5S_SCALAR);
 
-		// again why BE?
-		attr = H5Acreate(dataset, "org", H5T_STD_I32BE, aid2, H5P_DEFAULT, H5P_DEFAULT);
+		// org could even be a byte since it's [0-2]
+		attr = H5Acreate(dataset, "org", H5T_NATIVE_INT, aid2, H5P_DEFAULT, H5P_DEFAULT);
 
-		native_datatype = H5Tget_native_type(H5T_STD_I32BE, H5T_DIR_ASCEND);
-		H5Awrite(attr, native_datatype, &org);
-		H5Tclose(native_datatype);
+		H5Awrite(attr, H5T_NATIVE_INT, &org);
+
+		//native_datatype = H5Tget_native_type(H5T_STD_I32BE, H5T_DIR_ASCEND);
+		//H5Awrite(attr, native_datatype, &org);
+		//H5Tclose(native_datatype);
 
 		H5Sclose(aid2);
 		H5Aclose(attr);
@@ -135,25 +111,21 @@ void WriteHDF5(hid_t parent, char* name, Var* v)
 		break;
 
 	case ID_STRING:
-		/*
-		** Member is a string of characters
-		*/
+		// Member is a string of characters
 
 		lines     = 1;
-		length    = 1; /*Set length to 1, and size to length*/
+		length    = 1; // Set length to 1, and size to length
 		dataspace = H5Screate_simple(1, &length, NULL);
-		length    = strlen(V_STRING(v)) + 1; /*String+NULL*/
+		length    = strlen(V_STRING(v)) + 1; // String+NULL
 		datatype  = H5Tcopy(H5T_C_S1);
 		H5Tset_size(datatype, length);
 		dataset = H5Dcreate(parent, name, datatype, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 		H5Dwrite(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, V_STRING(v));
 
 		aid2 = H5Screate(H5S_SCALAR);
-		attr = H5Acreate(dataset, "lines", H5T_STD_I32BE, aid2, H5P_DEFAULT, H5P_DEFAULT);
-		native_datatype = H5Tget_native_type(H5T_STD_I32BE, H5T_DIR_ASCEND);
+		attr = H5Acreate(dataset, "lines", H5T_NATIVE_INT, aid2, H5P_DEFAULT, H5P_DEFAULT);
 
-		H5Awrite(attr, native_datatype, &lines);
-		H5Tclose(native_datatype);
+		H5Awrite(attr, H5T_NATIVE_INT, &lines);
 		H5Sclose(aid2);
 		H5Aclose(attr);
 
@@ -169,11 +141,11 @@ void WriteHDF5(hid_t parent, char* name, Var* v)
 		int stln     = 0;
 		int i;
 
-		/*Pack the array into a single buffer with newlines*/
+		// Pack the array into a single buffer with newlines
 		for (i = 0; i < V_TEXT(v).Row; i++) {
-			big_size += strlen(V_TEXT(v).text[i]) + 1; /* Added 1 for \n char */
+			big_size += strlen(V_TEXT(v).text[i]) + 1; // Added 1 for \n char
 		}
-		big_size++; /*Final NULL*/
+		big_size++; // Final NULL
 		big      = (unsigned char*)calloc(big_size, sizeof(char));
 		big_size = 0;
 		for (i = 0; i < V_TEXT(v).Row; i++) {
@@ -195,11 +167,9 @@ void WriteHDF5(hid_t parent, char* name, Var* v)
 		H5Dwrite(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, big);
 		lines = V_TEXT(v).Row;
 		aid2  = H5Screate(H5S_SCALAR);
-		attr  = H5Acreate(dataset, "lines", H5T_STD_I32BE, aid2, H5P_DEFAULT, H5P_DEFAULT);
-		native_datatype = H5Tget_native_type(H5T_STD_I32BE, H5T_DIR_ASCEND);
+		attr  = H5Acreate(dataset, "lines", H5T_NATIVE_INT, aid2, H5P_DEFAULT, H5P_DEFAULT);
 
-		H5Awrite(attr, native_datatype, &lines);
-		H5Tclose(native_datatype);
+		H5Awrite(attr, H5T_NATIVE_INT, &lines);
 
 		H5Sclose(aid2);
 		H5Aclose(attr);
@@ -293,13 +263,18 @@ static herr_t group_iter(hid_t parent, const char* name, const H5L_info_t* info,
 
 		if (type != ID_STRING) {
 			org = BSQ;
-			if ((attr = H5Aopen_name(dataset, "org")) < 0) {
+			if (!H5Aexists(dataset, "org")) {
 				parse_error("Unable to get org. Assuming %s.\n", Org2Str(org));
 			} else {
+				attr = H5Aopen_name(dataset, "org");
+				/*
 				native_type_attr = H5Tget_native_type(H5T_STD_I32BE, H5T_DIR_ASCEND);
 				H5Aread(attr, native_type_attr, &org);
-				H5Aclose(attr);
 				H5Tclose(native_type_attr);
+				*/
+				H5Aread(attr, H5T_NATIVE_INT, &org);
+
+				H5Aclose(attr);
 			}
 
 			// HDF data sets can have arbitrary rank and we don't
@@ -310,19 +285,23 @@ static herr_t group_iter(hid_t parent, const char* name, const H5L_info_t* info,
 			H5Sget_simple_extent_dims(dataspace, datasize, maxsize);
 
 			for (i = 0; i < 3; i++) {
-				size[i] = datasize[i];
+				// HDF stores data in row-major order like C, or "along the fasted-changing dimension"
+				// So while we say X, Y, Z and think of that as row/column/plane and access it in davinci as
+				// array[x,y,z], if you declared it in C array[X][Y][Z], it's actually stored Z, Y, X
+				// so to get the correct representation we reverse the dimensions on read and write.
+				// see the fine print Note just above 7.3.2.6 in the HDF5 User's Guide
+				//
+				// www.hdfgroup.org/HDF5/doc/UG/HDF5_Users_Guide-Responsive HTML5/index.html
+				size[2-i] = datasize[i];
 			}
-			// mem_dataspace = H5Screate_simple(3, datasize, NULL);
 
 			dsize   = H5Sget_simple_extent_npoints(dataspace);
 			databuf = calloc(dsize, NBYTES(type));
 
-			// H5Dread(dataset, native_type_data, H5S_ALL, mem_dataspace, H5P_DEFAULT, databuf);
 			H5Dread(dataset, native_type_data, H5S_ALL, H5S_ALL, H5P_DEFAULT, databuf);
 
 			H5Tclose(datatype);
 			H5Sclose(dataspace);
-			// H5Sclose(mem_dataspace);
 			H5Dclose(dataset);
 			H5Tclose(native_type_data);
 
@@ -346,16 +325,15 @@ static herr_t group_iter(hid_t parent, const char* name, const H5L_info_t* info,
 			v         = newVal(org, size[0], size[1], size[2], type, databuf);
 			V_NAME(v) = strdup(name);
 
-			/* else type == ID_STRING */
+		// else type == ID_STRING
 		} else {
 			Lines = 0;
-			if ((attr = H5Aopen_name(dataset, "lines")) < 0) {
+			if (!H5Aexists(dataset, "lines")) {
 				parse_error("Unable to get lines. Assuming %d.\n", Lines);
 			} else {
-				native_type_attr = H5Tget_native_type(H5T_STD_I32BE, H5T_DIR_ASCEND);
-				H5Aread(attr, native_type_attr, &Lines);
+				attr = H5Aopen_name(dataset, "lines");
+				H5Aread(attr, H5T_NATIVE_INT, &Lines);
 				H5Aclose(attr);
-				H5Tclose(native_type_attr);
 			}
 
 			v = newVar();
@@ -372,17 +350,17 @@ static herr_t group_iter(hid_t parent, const char* name, const H5L_info_t* info,
 			for (i = 0; i < 3; i++) {
 				size[i] = datasize[i];
 			}
-			/*  dsize = H5Sget_simple_extent_npoints(dataspace);*/
+			//  dsize = H5Sget_simple_extent_npoints(dataspace);
 			dsize   = H5Tget_size(datatype);
 			databuf = (unsigned char*)calloc(dsize, sizeof(char));
 			H5Dread(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, databuf);
 			if (Lines <= 1) {
 				V_STRING(v) = databuf;
-			} else { /*Now we have to dissable to the large block of text*/
+			} else { // Now we have to dissable to the large block of text
 				int lm = 0, nm = 0;
 				int len   = strlen(databuf);
 				int index = 0;
-				/*send nm through databuf looking for \n.*/
+				// send nm through databuf looking for \n.
 				while (nm < len) {
 					if (((char*)databuf)[nm] == '\n') {
 						V_TEXT(v).text[index] = malloc(nm - lm + 1);
@@ -392,12 +370,9 @@ static herr_t group_iter(hid_t parent, const char* name, const H5L_info_t* info,
 						nm++; /*Next line or end*/
 						lm = nm;
 					} else if (nm == (len - 1)) {
-						/*
-						 * drd Bug 2208 Loading a particular hdf5 file kills davinci
-						 * This is the case where we are at the end of a 'string' data set,
-						 * but the end is not a newline
-						 *
-						 */
+						// drd Bug 2208 Loading a particular hdf5 file kills davinci
+						// This is the case where we are at the end of a 'string' data set,
+						// but the end is not a newline
 						V_TEXT(v).text[index] = malloc(nm - lm + 2);
 						memcpy(V_TEXT(v).text[index], (char*)databuf + lm, (nm - lm + 2));
 						V_TEXT(v).text[index][nm - lm + 1] = '\0';
