@@ -152,6 +152,10 @@ AC_CHECK_LIB(regex, main, [have_libregex=yes],[have_libregex=no])
 AM_CONDITIONAL(HAVE_LIBREGEX, [test "x$have_libregex" = "xyes"])
 
 AC_CHECK_LIB(z, deflate, [have_libpng2=yes], [have_libpng2=no])
+dnl AC_CHECK_LIB(z, deflate)
+dnl AC_CHECK_LIB(png, png_read_info)
+dnl AC_CHECK_LIB(png, png_read_image,[have_libpng2=yes],[have_libpng2=no],
+dnl [$LDFLAGS -lpng -Liomedley/libpng-1.2.3])
 
 if test "x$have_libpng2" = "xyes"; then
 	AC_DEFINE(HAVE_LIBPNG, 1, [ if you have libpng] )
@@ -343,9 +347,7 @@ dnl fi
 dnl Check for headers.
 AC_HEADER_DIRENT
 AC_HEADER_STDC
-AC_CHECK_HEADERS(fcntl.h limits.h malloc.h sys/file.h sys/time.h unistd.h)
-AC_CHECK_HEADERS(values.h)
-AC_CHECK_HEADERS(limits.h)
+AC_CHECK_HEADERS(fcntl.h sys/file.h sys/time.h unistd.h)
 AC_CHECK_HEADERS(libgen.h)
 AC_CHECK_HEADERS(Xm/Xrt3d.h)
 
@@ -358,9 +360,9 @@ dnl Check for library functions.
 AC_FUNC_MEMCMP
 AC_TYPE_SIGNAL
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS(mkdir putenv select strdup strndup strspn strstr strtod strtol strtoul drand48)
-AC_CHECK_FUNCS(index rindex getdtablesize getwd usleep strtoul basename)
-AC_CHECK_FUNCS(dirname bcopy bcmp bzero)
+AC_CHECK_FUNCS(mkdir putenv select strdup strndup strspn strstr drand48 random)
+AC_CHECK_FUNCS(getdtablesize getwd usleep strtoul basename)
+AC_CHECK_FUNCS(dirname mmap)
 
 dnl Get path to libisis+includes from system env if ISISR is defined
 if test "x$ISISR" != "x"; then
