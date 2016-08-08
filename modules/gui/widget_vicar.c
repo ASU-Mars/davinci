@@ -368,7 +368,7 @@ getZoom(Widget widget) {
 void
 setZoom(Widget widget, Var *value)
 {
-	if (V_TYPE(value) != ID_VAL || V_FORMAT(value) > INT) {
+	if (V_TYPE(value) != ID_VAL || V_FORMAT(value) > DV_INT32) {
 		parse_error("VICAR zoom resource must be an integer");
 		return;
 	}
@@ -446,23 +446,23 @@ setImage(Widget widget, Var *value)
 	}
 
 	switch (V_FORMAT(value)) {
-		case BYTE:
+		case DV_UINT8:
 			dataType = XvicBYTE;
 			break;
-		case SHORT:
+		case DV_INT16:
 			dataType = XvicHALF;
 			break;
-		case INT:
+		case DV_INT32:
 			dataType = XvicFULL;
 			break;
-		case FLOAT:
+		case DV_FLOAT:
 			dataType = XvicREAL;
 			break;
-		case DOUBLE:
+		case DV_DOUBLE:
 			dataType = XvicDOUBLE;
 			break;
 		default:
-			parse_error("VICAR image data must be BYTE, SHORT, INT, FLOAT, or DOUBLE.");
+			parse_error("VICAR image data must be DV_UINT8, DV_INT16, DV_INT32, DV_FLOAT, or DV_DOUBLE.");
 			return 0;
 	}
 
@@ -831,7 +831,7 @@ setOverlay(Widget widget, Var *value)
 
 	if (find_struct(value, "id", &vId) < 0 ||
 			V_TYPE(vId) != ID_VAL ||
-			V_FORMAT(vId) > INT) {
+			V_FORMAT(vId) > DV_INT32) {
 		parse_error("VICAR overlay: must be a struct containing id (integer).");
 		return;
 	}
@@ -854,7 +854,7 @@ setOverlay(Widget widget, Var *value)
 
 	/* Extract X location. */
 	if (find_struct(value, "x", &vX) >= 0) {
-		if (V_TYPE(vX) != ID_VAL || V_FORMAT(vX) < FLOAT) {
+		if (V_TYPE(vX) != ID_VAL || V_FORMAT(vX) < DV_FLOAT) {
 			parse_error("VICAR overlay: x must be a double.");
 			return;
 		}
@@ -879,7 +879,7 @@ setOverlay(Widget widget, Var *value)
 
 	/* Extract Y location. */
 	if (find_struct(value, "y", &vY) >= 0) {
-		if (V_TYPE(vY) != ID_VAL || V_FORMAT(vY) < FLOAT) {
+		if (V_TYPE(vY) != ID_VAL || V_FORMAT(vY) < DV_FLOAT) {
 			parse_error("VICAR overlay: y must be a double.");
 			return;
 		}
@@ -955,7 +955,7 @@ setOverlay(Widget widget, Var *value)
 	if (vBitmap) {
 		/* Parse bitmap. */
 
-		if (V_TYPE(vBitmap) != ID_VAL || V_FORMAT(vBitmap) != BYTE ||
+		if (V_TYPE(vBitmap) != ID_VAL || V_FORMAT(vBitmap) != DV_UINT8 ||
 				GetZ(vBitmap) != 1) {
 			parse_error("VICAR overlay: bitmap must be 2D byte.");
 			return;
@@ -1681,11 +1681,11 @@ Var *getLUT (Widget widget)
 		case 1:
 			lut = (int *) calloc (LUT_SIZE * 1, sizeof(int));
 			XvicImageGetMonoLUT (widget, lut);
-			return newVal (BSQ, LUT_SIZE, 1, 1, INT, lut);
+			return newVal (BSQ, LUT_SIZE, 1, 1, DV_INT32, lut);
 		case 3:
 			lut = (int *) calloc (LUT_SIZE * 3, sizeof(int));
 			XvicImageGetColorLUT (widget, lut+LUT_SIZE*0, lut+LUT_SIZE*1, lut+LUT_SIZE*2);
-			return newVal (BSQ, LUT_SIZE, 3, 1, INT, lut);
+			return newVal (BSQ, LUT_SIZE, 3, 1, DV_INT32, lut);
 		default:
 			parse_error ("Unable to retrieve LUT from non-mono, non-color image data\n");
 			return newInt(-1);

@@ -28,7 +28,7 @@ Var* ff_atoi(vfuncptr func, Var* arg)
 		for (l = 0; l < V_TEXT(v).Row; l++) {
 			data[l] = strtod(V_TEXT(v).text[l], NULL);
 		}
-		return newVal(BSQ, 1, l, 1, INT, data);
+		return newVal(BSQ, 1, l, 1, DV_INT32, data);
 	}
 }
 
@@ -54,11 +54,11 @@ Var* ff_atof(vfuncptr func, Var* arg)
 
 	if (V_TYPE(v) == ID_STRING) {
 		if (!strcmp(func->name, "atof")) {
-			s          = newVal(BSQ, 1, 1, 1, FLOAT, NULL);
+			s          = newVal(BSQ, 1, 1, 1, DV_FLOAT, NULL);
 			V_DATA(s)  = (float*)calloc(1, sizeof(float));
 			V_FLOAT(s) = (float)strtod(V_STRING(v), NULL);
 		} else if (!strcmp(func->name, "atod")) {
-			s           = newVal(BSQ, 1, 1, 1, DOUBLE, NULL);
+			s           = newVal(BSQ, 1, 1, 1, DV_DOUBLE, NULL);
 			V_DATA(s)   = (double*)calloc(1, sizeof(double));
 			V_DOUBLE(s) = (double)strtod(V_STRING(v), NULL);
 		}
@@ -67,14 +67,14 @@ Var* ff_atof(vfuncptr func, Var* arg)
 		int nlines = V_TEXT(v).Row;
 		if (!strcmp(func->name, "atof")) {
 			float* data = (float*)calloc(nlines, sizeof(float));
-			s           = newVal(BSQ, 1, nlines, 1, FLOAT, NULL);
+			s           = newVal(BSQ, 1, nlines, 1, DV_FLOAT, NULL);
 			for (line = 0; line < nlines; line++) {
 				data[line] = strtod(V_TEXT(v).text[line], NULL);
 			}
 			V_DATA(s) = data;
 		} else if (!strcmp(func->name, "atod")) {
 			double* data = (double*)calloc(nlines, sizeof(double));
-			s            = newVal(BSQ, 1, nlines, 1, DOUBLE, NULL);
+			s            = newVal(BSQ, 1, nlines, 1, DV_DOUBLE, NULL);
 			for (line = 0; line < nlines; line++) {
 				data[line] = strtod(V_TEXT(v).text[line], NULL);
 			}
@@ -100,11 +100,11 @@ char* do_add_strings(char* s1, Var* v, int flag)
 		s2 = V_STRING(v);
 	} else {
 		switch (V_FORMAT(v)) {
-		case BYTE:
-		case SHORT:
-		case INT: sprintf(buf, "%d", extract_int(v, 0)); break;
-		case FLOAT:
-		case DOUBLE: sprintf(buf, "%.*g", SCALE, extract_double(v, 0)); break;
+		case DV_UINT8:
+		case DV_INT16:
+		case DV_INT32: sprintf(buf, "%d", extract_int(v, 0)); break;
+		case DV_FLOAT:
+		case DV_DOUBLE: sprintf(buf, "%.*g", SCALE, extract_double(v, 0)); break;
 		}
 		s2 = buf;
 	}
@@ -327,7 +327,7 @@ Var* ff_strlen(vfuncptr func, Var* arg)
 				r[i] = 0;
 			}
 		}
-		return newVal(BSQ, 1, n, 1, INT, r);
+		return newVal(BSQ, 1, n, 1, DV_INT32, r);
 	} else if (V_TYPE(s1) == ID_STRING) {
 		return newInt(strlen(V_STRING(s1)));
 	} else {

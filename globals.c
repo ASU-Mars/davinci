@@ -29,7 +29,6 @@ int indent   = 0;
 
 Var* curnode = NULL;
 
-
 void quit(int);
 
 void make_sym(Var* v, int format, char* str)
@@ -41,14 +40,14 @@ void make_sym(Var* v, int format, char* str)
 	V_DATA(v)                                  = calloc(1, NBYTES(format));
 
 	switch (format) {
-	case INT: *((int*)(V_DATA(v))) = strtol(str, NULL, 10); break;
-	case FLOAT: {
+	case DV_INT32: *((int*)(V_DATA(v))) = strtol(str, NULL, 10); break;
+	case DV_FLOAT: {
 		double d;
 		d = strtod(str, NULL);
-		if (((d > MAXFLOAT) || (d < MINFLOAT)) && (d != 0)) {
+		if (((d > FLT_MAX) || (d < FLT_MIN)) && (d != 0)) {
 			free(V_DATA(v));
-			V_DATA(v)               = calloc(1, NBYTES(DOUBLE));
-			V_FORMAT(v)             = DOUBLE;
+			V_DATA(v)               = calloc(1, NBYTES(DV_DOUBLE));
+			V_FORMAT(v)             = DV_DOUBLE;
 			*((double*)(V_DATA(v))) = d;
 		} else {
 			*((float*)(V_DATA(v))) = d;
