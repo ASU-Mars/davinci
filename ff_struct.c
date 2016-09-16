@@ -299,8 +299,8 @@ Var* ff_get_struct(vfuncptr func, Var* arg)
 Var* varray_subset(Var* v, Range* r)
 {
 	Var* s;
-	int size;
-	int i, j;
+	size_t size;
+	size_t i, j;
 	char* name;
 	Var* data;
 
@@ -330,17 +330,15 @@ Var* varray_subset(Var* v, Range* r)
 
 Var* set_varray(Var* v, Range* r, Var* e)
 {
-	int i;
+	size_t i;
 	int count = 0;
 
-	int size = 1 + (r->hi[0] - r->lo[0]) / r->step[0];
+	size_t size = 1 + (r->hi[0] - r->lo[0]) / r->step[0];
 
 	Var* data;
 	Var* old;
 
-	/*
-	** The case of 1 <- N, just duplicate N and stuff it in here
-	*/
+	// The case of 1 <- N, just duplicate N and stuff it in here
 	if (size == 1) {
 		i    = r->lo[0];
 		data = V_DUP(e);
@@ -439,23 +437,47 @@ void free_struct(Var* v)
 
 int compare_struct(Var* a, Var* b)
 {
-	int i;
+	int i, pos;
 	int count = get_struct_count(a);
 	char *name_a, *name_b;
 	Var *data_a, *data_b;
 
-	if (get_struct_count(b) != count) return (0);
+	if (get_struct_count(b) != count) return 0;
 
-	for (i = 0; i < count; i++) {
+	// NOTE(rswinkle) Changed to default to comparing members by name first, if possible
+	//
+	// Why do we allow unnamed members?  You can only access those by index
+	// and you can have more than one so we can't just compare keys like
+	// we should be doing.
+	
+	for (i=0; i<count; ++i) {
 		get_struct_element(a, i, &name_a, &data_a);
 		get_struct_element(b, i, &name_b, &data_b);
 
-		if ((name_a && !name_b) || (name_b && !name_a)) return (0);
-		if (name_a && name_b && strcmp(name_a, name_b)) return (0);
-
-		if (compare_vars(data_a, data_b) == 0) return (0);
+		if (!name_a || !name_b)
+			break;
 	}
-	return (1);
+
+	if (i != count) {
+		for (i = 0; i < count; i++) {
+			get_struct_element(a, i, &name_a, &data_a);
+			get_struct_element(b, i, &name_b, &data_b);
+
+			if ((name_a && !name_b) || (name_b && !name_a)) return 0;
+			if (name_a && name_b && strcmp(name_a, name_b)) return 0;
+
+			if (compare_vars(data_a, data_b) == 0) return 0;
+		}
+	} else {
+		for (i = 0; i < count; i++) {
+			get_struct_element(a, i, &name_a, &data_a);
+			if ((pos = find_struct(a, name_a, &data_b)) >= 0) {
+				if (compare_vars(data_a, data_b) == 0)
+					return 0;
+			}
+		}
+	}
+	return 1;
 }
 
 int get_struct_element(const Var* v, const int i, char** name, Var** data)
