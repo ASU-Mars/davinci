@@ -73,7 +73,7 @@ Requires: libXmu-devel
 Requires: libtool-ltdl-devel
 Requires: openmotif-devel
 Requires: compat-libf2c-34
-Requires: isis2
+#Requires: isis2
 
 Prefix: %_prefix
 
