@@ -12,7 +12,6 @@
 #define PRINTABLE_STR(s) ((s) ? (s) : "(null)")
 #define MODULE_HELP (const char*)"help"
 
-char *unescape(char *), *unquote(char *);
 char* cleanup_input(char* s);
 Var* pp_new_parallel(Var* axis, Var* arg);
 
@@ -24,8 +23,13 @@ Var* p_mknod(int type, Var* left, Var* right)
 	Var* v;
 	Node* n;
 
-	/* v = newVar(); */
-	/* mem_claim(v); */
+	/*
+	 * 96, 32, 72 on 64-bit
+	printf("sizeof(Var) = %zu\n", sizeof(Var));
+	printf("sizeof(Node) = %zu\n", sizeof(Node));
+	printf("sizeof(Sym) = %zu\n", sizeof(Sym));
+	*/
+
 	v       = calloc(1, sizeof(Var));
 	n       = V_NODE(v);
 	v->type = type;
@@ -43,8 +47,6 @@ Var* p_mknod(int type, Var* left, Var* right)
 Var* p_mkval(int type, char* str)
 {
 	Var* v;
-	/* v = newVar(); */
-	/* mem_claim(v); */
 	v = calloc(1, sizeof(Var));
 
 	switch (type) {
@@ -53,11 +55,13 @@ Var* p_mkval(int type, char* str)
 		V_TYPE(v)   = ID_STRING;
 		break;
 	case ID_IVAL:
-		make_sym(v, DV_INT32, str);
+		// NOTE(rswinkle) default to i64
+		make_sym(v, DV_INT64, str);
 		V_TYPE(v) = ID_VAL;
 		break;
 	case ID_RVAL:
-		make_sym(v, DV_FLOAT, str);
+		// NOTE(rswinkle) fix intermediate float bug
+		make_sym(v, DV_DOUBLE, str);
 		V_TYPE(v) = ID_VAL;
 		break;
 	case ID_ID:
@@ -79,27 +83,156 @@ int is_zero(Var* v)
 	if (V_TYPE(v) == ID_VAL && V_DSIZE(v) == 1) {
 		switch (V_FORMAT(v)) {
 		case DV_UINT8:
+		case DV_UINT16:
+		case DV_UINT32:
+		case DV_UINT64:
+
+		case DV_INT8:
 		case DV_INT16:
-		case DV_INT32: return (extract_int(v, 0) == 0);
+		case DV_INT32:
+		case DV_INT64: return (extract_i64(v, 0) == 0);
+
 		case DV_FLOAT:
 		case DV_DOUBLE: return (extract_float(v, 0) == 0.0);
 		}
 	} else {
 		size_t i;
+		// NOTE(rswinkle) This seems like yet another bad/wrong design decision.  In C, 0 is
+		// the only false value, any set bit is true.  Likewise in any scripting language that I know
+		// testing for "false"/0 on a sequence is true only if all elements are false 0 whereas any non-0
+		// element makes the entire thing "true".  Maybe this gives some advantage for working on images but
+		// it's unintuitive.
 		for (i = 0; i < V_DSIZE(v); i++) {
 			switch (V_FORMAT(v)) {
 			case DV_UINT8:
+			case DV_UINT16:
+			case DV_UINT32:
+			case DV_UINT64:
+
+			case DV_INT8:
 			case DV_INT16:
 			case DV_INT32:
-				if (extract_int(v, i) == 0) return (1);
+			case DV_INT64: if (extract_i64(v, i) == 0) return 1;
+
 			case DV_FLOAT:
-			case DV_DOUBLE:
-				if (extract_float(v, i) == 0.0) return (1);
+			case DV_DOUBLE: if (extract_float(v, i) == 0.0) return 1;
 			}
 		}
 	}
 	return (0);
 }
+
+
+static debug_print_var_type(int type)
+{
+static char* enum_strings[] = {
+	"ID_NONE  = 0, /* a non value */",
+	"ID_ERROR = 99,",
+	"ID_BASE  = 100, /* in case of conflicts */",
+	"ID_UNK,         /* Unknown type - also used as a generic type */",
+	"ID_STRING,      /* NULL terminated character string */",
+	"ID_KEYWORD,     /* keyword argument */",
+	"ID_VAL,         /* everything with dim != 0 */",
+	"ID_STRUCT,      /* Structure */",
+	"ID_TEXT,        /*1-D Array of Strings*/",
+
+	"ID_IVAL, /* Integer value */",
+	"ID_RVAL, /* real value */",
+	"ID_ID,   /* Identifier */",
+
+	"ID_LIST,   ",
+	"ID_IF"
+	"ID_ELSE,   ",
+	"ID_WHILE,  ",
+	"ID_CONT,   ",
+	"ID_BREAK,  ",
+	"ID_RETURN, ",
+
+	"ID_RANGES, /* list of ranges */",
+	"ID_RSTEP,  /* list of ranges */",
+	"ID_RANGE,  /* single range value */",
+	"ID_SET,    /* assignment expression */",
+	"ID_OR",
+	"ID_AND",
+	"ID_EQ",
+	"ID_NE",
+	"ID_LT",
+	"ID_GT",
+	"ID_LE",
+	"ID_GE",
+	"ID_ADD",
+	"ID_SUB",
+	"ID_MULT",
+	"ID_DIV",
+	"ID_MOD",
+	"ID_UMINUS",
+	"ID_LSHIFT",
+	"ID_RSHIFT",
+	"ID_FUNCT",
+	"ID_ARRAY,  /* application of ranges to array */",
+
+	// I think these descriptions are swapped based on evaluate()
+	"ID_ARG,    /* list of arguments */",
+	"ID_ARGS,   /* single argument */",
+
+	"ID_FOR",
+	"ID_FOREACH",
+	"ID_EACH",
+
+	"ID_ARGV,    /* $VALUE argument. Evalue at run */",
+
+	"ID_INC,    /* increment value */",
+	"ID_DEC,    /* decrement value */",
+	"ID_INCSET, /* increment value */",
+	"ID_DECSET, /* decrement value */",
+	"ID_MULSET, /* *= value */",
+	"ID_DIVSET, /* /= value */",
+
+	"ID_POW,   /* exponent */",
+	"ID_CAT,   /* concatenate */",
+	"ID_ENUM,  /* enumerated argument, not parsed */",
+	"ID_DECL,  /* Declaration */",
+	"ID_WHERE, /* Where */",
+	"ID_DEREF, /* Structure dereference */",
+
+	"ID_CONSTRUCT,   /* Structure constructor */",
+	"ID_DECONSTRUCT, /* Structure deconstructor */",
+
+	"ONE_AXIS, /* argument options */",
+	"ANY_AXIS, /* argument options */",
+
+	"ID_LINE",
+
+	"ID_MODULE,   /* davinci module variable ID */",
+	"ID_FUNCTION, /* davinci module function variable ID */",
+	"ID_PARALLEL, /* parallelization */",
+	"ID_VARARGS,  /* varargs arguments */",
+
+	"ID_FPTR /* a function pointer */",
+	};
+
+	if (type > 0)
+		type -= ID_ERROR-1;
+
+	puts(enum_strings[type]);
+}
+
+/*
+define myfunc() {
+ printf("argc = %d\n", $0)
+ printf("argc = %d\n", $argc)
+
+ l = $argv
+ printf("l = %s %s\n", l)
+
+
+ c = 5
+ d = 6
+ ls()
+
+}
+
+*/
 
 /**
  ** evaluate() - Evaluate a parse tree
@@ -115,6 +248,12 @@ Var* evaluate(Var* n)
 	if (n == NULL) return (NULL);
 	type = V_TYPE(n);
 
+	// DEBUG(rswinkle)
+#if 0
+	//printf("evaluate scope_count = %d\n", scope_stack_count());
+	debug_print_var_type(type);
+#endif
+	
 	/**
 	 ** These are not nodes, but merely vals.  push 'em. and return;
 	 **/
@@ -189,7 +328,9 @@ Var* evaluate(Var* n)
 			cleanup(scope);
 			evaluate(left);
 			p1 = pop(scope);
-			if ((p2 = eval(p1)) != NULL) p1 = p2;
+			if ((p2 = eval(p1)) != NULL) {
+				p1 = p2;
+			}
 			scope->rval                     = p1;
 		}
 		scope->returned = 1;

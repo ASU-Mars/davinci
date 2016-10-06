@@ -101,6 +101,8 @@ void pp_print_struct(Var* v, int indent, int depth)
 
 	indent += 4;
 
+	// TODO(rswinkle): print members in alphabetical order? so 2 equal structs
+	// will actually look equal when printed?
 	count = get_struct_count(v);
 	for (i = 0; i < count; i++) {
 		get_struct_element(v, i, &name, &s);
@@ -110,9 +112,9 @@ void pp_print_struct(Var* v, int indent, int depth)
 
 void dump_var(Var* v, int indent, int limit)
 {
-	int i, j, k;
+	size_t i, j, k;
 	size_t c;
-	int x, y, z;
+	size_t x, y, z;
 	int row;
 
 	switch (V_TYPE(v)) {
@@ -126,16 +128,24 @@ void dump_var(Var* v, int indent, int limit)
 					for (i = 0; i < x; i++) {
 						c = cpos(i, j, k, v);
 						switch (V_FORMAT(v)) {
-						case DV_UINT8: printf("%d\t", ((u_char*)V_DATA(v))[c]); break;
-						case DV_INT16: printf("%d\t", ((short*)V_DATA(v))[c]); break;
-						case DV_INT32: printf("%d\t", ((int*)V_DATA(v))[c]); break;
+						// TODO(rswinkle) test on 32 bit
+						case DV_UINT8: printf("%"PRIu8"\t", ((u8*)V_DATA(v))[c]); break;
+						case DV_UINT16: printf("%"PRIu16"\t", ((u16*)V_DATA(v))[c]); break;
+						case DV_UINT32: printf("%"PRIu32"\t", ((u32*)V_DATA(v))[c]); break;
+						case DV_UINT64: printf("%"PRIu64"\t", ((u64*)V_DATA(v))[c]); break;
+
+						case DV_INT8: printf("%"PRId8"\t", ((i8*)V_DATA(v))[c]); break;
+						case DV_INT16: printf("%"PRId16"\t", ((i16*)V_DATA(v))[c]); break;
+						case DV_INT32: printf("%"PRId32"\t", ((i32*)V_DATA(v))[c]); break;
+						case DV_INT64: printf("%"PRId64"\t", ((i64*)V_DATA(v))[c]); break;
+
 						case DV_FLOAT: printf("%#.*g\t", SCALE, ((float*)V_DATA(v))[c]); break;
 						case DV_DOUBLE: printf("%#.*g\t", SCALE, ((double*)V_DATA(v))[c]); break;
 						}
 					}
-					printf("\n");
+					putchar('\n');
 				}
-				if (z > 1) printf("\n");
+				if (z > 1) putchar('\n');
 			}
 		}
 		break;
@@ -153,7 +163,7 @@ void dump_var(Var* v, int indent, int limit)
 		row            = V_TEXT(v).Row;
 		if (limit) row = min(limit, row);
 		for (i = 0; i < row; i++) {
-			printf("%*s%d: %s\n", indent, "", (i + 1), V_TEXT(v).text[i]);
+			printf("%*s%zu: %s\n", indent, "", (i + 1), V_TEXT(v).text[i]);
 		}
 		break;
 	}
@@ -162,7 +172,7 @@ void dump_var(Var* v, int indent, int limit)
 void pp_print_var(Var* v, char* name, int indent, int depth)
 {
 	char bytes[64];
-	int x, y, z;
+	size_t x, y, z;
 	int npassed = (name != NULL);
 
 	if (name == NULL) {
@@ -179,9 +189,9 @@ void pp_print_var(Var* v, char* name, int indent, int depth)
 			x = GetSamples(V_SIZE(v), V_ORG(v));
 			y = GetLines(V_SIZE(v), V_ORG(v));
 			z = GetBands(V_SIZE(v), V_ORG(v));
-			sprintf(bytes, "%ld", NBYTES(V_FORMAT(v)) * V_DSIZE(v));
+			sprintf(bytes, "%zu", NBYTES(V_FORMAT(v)) * V_DSIZE(v));
 			commaize(bytes);
-			printf("%dx%dx%d array of %s, %s format [%s bytes]\n", x, y, z, Format2Str(V_FORMAT(v)),
+			printf("%zux%zux%zu array of %s, %s format [%s bytes]\n", x, y, z, Format2Str(V_FORMAT(v)),
 			       Org2Str(V_ORG(v)), bytes);
 			if (indent == 0) {
 				dump_var(v, 0, 100);
@@ -413,8 +423,8 @@ Var* pp_inc_var(Var* id, Var* range, Var* exp)
 int array_replace(Var* dst, Var* src, Range* r)
 {
 	size_t i, j, k;
-	int size[3];
-	int x, y, z;
+	size_t size[3];
+	size_t x, y, z;
 	size_t d, s;
 	size_t src_nbytes;
 
@@ -450,16 +460,35 @@ int array_replace(Var* dst, Var* src, Range* r)
 					memcpy(((char*)V_DATA(dst)) + d * src_nbytes,
 					       ((char*)V_DATA(src)) + s * src_nbytes, src_nbytes);
 				} else {
+
+					// TODO(rswinkle) think about these extract funcs and where/if clamp is necessary
 					switch (V_FORMAT(dst)) {
 					case DV_UINT8:
-						((u_char*)V_DATA(dst))[d] = saturate_byte(extract_int(src, s));
+						((u8*)V_DATA(dst))[d] = clamp_byte(extract_int(src, s));
+						break;
+					case DV_UINT16:
+						((u16*)V_DATA(dst))[d] = clamp_u16(extract_int(src, s));
+						break;
+					case DV_UINT32:
+						((u32*)V_DATA(dst))[d] = clamp_u32(extract_int(src, s));
+						break;
+					case DV_UINT64:
+						((u64*)V_DATA(dst))[d] = extract_u64(src, s);
+						break;
+
+					case DV_INT8:
+						((i8*)V_DATA(dst))[d] = clamp_i8(extract_int(src, s));
 						break;
 					case DV_INT16:
-						((short*)V_DATA(dst))[d] = saturate_short(extract_int(src, s));
+						((i16*)V_DATA(dst))[d] = clamp_short(extract_int(src, s));
 						break;
 					case DV_INT32:
-						((int*)V_DATA(dst))[d] = saturate_int(extract_int(src, s));
+						((i32*)V_DATA(dst))[d] = clamp_i32(extract_int(src, s));
 						break;
+					case DV_INT64:
+						((i64*)V_DATA(dst))[d] = extract_i64(src, s);
+						break;
+
 					case DV_FLOAT: ((float*)V_DATA(dst))[d]   = extract_float(src, s); break;
 					case DV_DOUBLE: ((double*)V_DATA(dst))[d] = extract_double(src, s); break;
 					}
@@ -510,12 +539,10 @@ Var* pp_set_struct(Var* a, Var* b, Var* exp)
  ** Ranges:
  **/
 
-/**
- ** pp_mk_range() - make a range value, with specified from exression
- **/
+// pp_mk_range() - make a range value, with specified from exression
 Var* pp_mk_range(Var* r1, Var* r2)
 {
-	int v1 = 0, v2 = 0;
+	u64 v1 = 0, v2 = 0;
 	int format;
 	Var* v;
 
@@ -524,20 +551,20 @@ Var* pp_mk_range(Var* r1, Var* r2)
 
 	if (r1) {
 		format = V_FORMAT(r1);
-		if (format != DV_INT32 && format != DV_INT16 && format != DV_UINT8) {
+		if (format < DV_UINT8 || format > DV_INT64) {
 			parse_error("(r1) Invalid range value.");
 			return (NULL);
 		}
-		v1 = extract_int(r1, 0);
+		v1 = extract_u64(r1, 0);
 	}
 
 	if (r2) {
 		format = V_FORMAT(r2);
-		if (format != DV_INT32 && format != DV_INT16 && format != DV_UINT8) {
+		if (format < DV_UINT8 || format > DV_INT64) {
 			parse_error("(r2) Invalid range value");
 			return (NULL);
 		}
-		v2 = extract_int(r2, 0);
+		v2 = extract_u64(r2, 0);
 	}
 
 	v = newVar();
@@ -556,7 +583,7 @@ Var* pp_mk_range(Var* r1, Var* r2)
  **/
 Var* pp_mk_rstep(Var* r1, Var* r2)
 {
-	int v1 = 0;
+	u64 v1 = 0;
 	int format;
 
 	r1 = eval(r1);
@@ -572,11 +599,11 @@ Var* pp_mk_rstep(Var* r1, Var* r2)
 
 	if (r2) {
 		format = V_FORMAT(r2);
-		if (format != DV_INT32 && format != DV_INT16 && format != DV_UINT8) {
+		if (format < DV_UINT8 || format > DV_INT64) {
 			parse_error("(r2) Invalid range value");
 			return (NULL);
 		}
-		v1 = extract_int(r2, 0);
+		v1 = extract_u64(r2, 0);
 	}
 
 	V_RANGE(r1)->step[0] = v1;
@@ -717,10 +744,7 @@ char* get_env_var(char* name)
 	return (strdup(value));
 }
 
-/**
- ** pp_argv() - Get $arg value from current scope.
- **/
-
+// pp_argv() - Get $arg value from current scope.
 Var* pp_argv(Var* left, Var* right)
 {
 	int n;
@@ -899,9 +923,7 @@ char* toBytes(int i)
 	return (buf);
 }
 
-/**
- ** Pretty-print a number, with commas.
- **/
+// Pretty-print a number, with commas.
 void commaize(char* s)
 {
 	int i, j;
@@ -1021,7 +1043,7 @@ Var* pp_set_where(Var* id, Var* where, Var* exp)
 {
 	Var* v;
 	size_t i, j, k, l, dsize;
-	int ival, format;
+	int format;
 	double dval;
 
 	/**
@@ -1087,16 +1109,26 @@ Var* pp_set_where(Var* id, Var* where, Var* exp)
 	if (V_DSIZE(exp) == 1) {
 		dsize  = V_DSIZE(id);
 		format = V_FORMAT(id);
-		ival   = extract_int(exp, 0);
-		dval   = extract_double(exp, 0);
+
+		// NOTE(rswinkle)
+		u64 uval = extract_u64(exp, 0);
+		i64 ival = extract_i64(exp, 0);
+		dval = extract_double(exp, 0);
 
 		for (i = 0; i < dsize; i++) {
 			j = rpos(i, id, where);
 			if (extract_int(where, j)) {
 				switch (format) {
-				case DV_UINT8: ((u_char*)V_DATA(id))[i]  = ival; break;
-				case DV_INT16: ((short*)V_DATA(id))[i]   = ival; break;
-				case DV_INT32: ((int*)V_DATA(id))[i]     = ival; break;
+				case DV_UINT8: ((u8*)V_DATA(id))[i]   = uval; break;
+				case DV_UINT16: ((u16*)V_DATA(id))[i] = uval; break;
+				case DV_UINT32: ((u32*)V_DATA(id))[i] = uval; break;
+				case DV_UINT64: ((u64*)V_DATA(id))[i] = uval; break;
+
+				case DV_INT8: ((i8*)V_DATA(id))[i]    = ival; break;
+				case DV_INT16: ((i16*)V_DATA(id))[i]  = ival; break;
+				case DV_INT32: ((i32*)V_DATA(id))[i]  = ival; break;
+				case DV_INT64: ((i64*)V_DATA(id))[i]  = ival; break;
+
 				case DV_FLOAT: ((float*)V_DATA(id))[i]   = dval; break;
 				case DV_DOUBLE: ((double*)V_DATA(id))[i] = dval; break;
 				}

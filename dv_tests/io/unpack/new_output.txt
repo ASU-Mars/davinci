@@ -1,0 +1,203 @@
+~/workspace/davinci_github/dv_tests/io/unpack $ ../../../davinci -f unpack_all.txt 
+struct, 11 elements
+    c1: 1x34288x1 array of uint32, bsq format [137,152 bytes]
+    c2: 1x34288x1 array of uint16, bsq format [68,576 bytes]
+    c3: 38x34288x1 array of uint16, bsq format [2,605,888 bytes]
+    c4: 1x34288x1 array of uint16, bsq format [68,576 bytes]
+    c5: 1x34288x1 array of uint16, bsq format [68,576 bytes]
+    c6: 1x34288x1 array of float, bsq format [137,152 bytes]
+    c7: 9x34288x1 array of short, bsq format [617,184 bytes]
+    c8: 1x34288x1 array of float, bsq format [137,152 bytes]
+    c9: 1x34288x1 array of float, bsq format [137,152 bytes]
+    c10: 1x34288x1 array of float, bsq format [137,152 bytes]
+    c11: Text Buffer with 34288 lines of text
+        1: 3.06
+        2: 3.06
+        3: 3.06
+        4: 3.06
+        5: 3.06
+        6: 3.06
+        7: 3.06
+        8: 3.06
+        9: 3.06
+        10: 3.06
+struct, 18 elements
+    c1: 1x37901x1 array of uint32, bsq format [151,604 bytes]
+    c2: 1x37901x1 array of uint16, bsq format [75,802 bytes]
+    c3: 1x37901x1 array of uint16, bsq format [75,802 bytes]
+    c4: 1x37901x1 array of uint32, bsq format [151,604 bytes]
+    c5: 1x37901x1 array of byte, bsq format [37,901 bytes]
+    c6: 1x37901x1 array of uint16, bsq format [75,802 bytes]
+    c7: 1x37901x1 array of byte, bsq format [37,901 bytes]
+    c8: Text Buffer with 37901 lines of text
+        1: D
+        2: D
+        3: D
+        4: D
+        5: D
+        6: D
+        7: D
+        8: D
+        9: D
+        10: D
+    c9: Text Buffer with 37901 lines of text
+        1: 1
+        2: 1
+        3: 1
+        4: 1
+        5: 1
+        6: 1
+        7: 1
+        8: 1
+        9: 1
+        10: 1
+    c10: Text Buffer with 37901 lines of text
+        1: S
+        2: S
+        3: S
+        4: S
+        5: S
+        6: S
+        7: S
+        8: S
+        9: S
+        10: S
+    c11: Text Buffer with 37901 lines of text
+        1: C
+        2: C
+        3: C
+        4: C
+        5: C
+        6: C
+        7: C
+        8: C
+        9: C
+        10: C
+    c12: Text Buffer with 37901 lines of text
+        1: 1
+        2: 1
+        3: 1
+        4: 1
+        5: 1
+        6: 1
+        7: 1
+        8: 1
+        9: 1
+        10: 1
+    c13: Text Buffer with 37901 lines of text
+        1: L
+        2: L
+        3: L
+        4: L
+        5: L
+        6: L
+        7: L
+        8: L
+        9: L
+        10: L
+    c14: Text Buffer with 37901 lines of text
+        1: L
+        2: L
+        3: L
+        4: L
+        5: L
+        6: L
+        7: L
+        8: L
+        9: L
+        10: L
+    c15: 1x37901x1 array of byte, bsq format [37,901 bytes]
+    c16: 1x37901x1 array of byte, bsq format [37,901 bytes]
+    c17: 4x37901x1 array of uint16, bsq format [303,208 bytes]
+    c18: 1x37901x1 array of byte, bsq format [37,901 bytes]
+struct, 12 elements
+    c1: 1x10x1 array of int8, bsq format [10 bytes]
+    c2: 1x10x1 array of uint16, bsq format [20 bytes]
+    c3: 1x10x1 array of int, bsq format [40 bytes]
+    c4: 1x10x1 array of uint32, bsq format [40 bytes]
+    c5: 1x10x1 array of float, bsq format [40 bytes]
+    c6: 1x10x1 array of double, bsq format [80 bytes]
+    c7: 1x10x1 array of short, bsq format [20 bytes]
+    c8: 1x10x1 array of int, bsq format [40 bytes]
+    c9: 1x10x1 array of uint32, bsq format [40 bytes]
+    c10: 1x10x1 array of float, bsq format [40 bytes]
+    c11: 1x10x1 array of double, bsq format [80 bytes]
+    c12: Text Buffer with 10 lines of text
+        1: hello
+        2: hello
+        3: hello
+        4: hello
+        5: hello
+        6: hello
+        7: hello
+        8: hello
+        9: hello
+        10: hello
+struct, 12 elements
+    c1: 1x10x1 array of int8, bsq format [10 bytes]
+    c2: 1x10x1 array of uint16, bsq format [20 bytes]
+    c3: 1x10x1 array of int, bsq format [40 bytes]
+    c4: 1x10x1 array of uint32, bsq format [40 bytes]
+    c5: 1x10x1 array of float, bsq format [40 bytes]
+    c6: 1x10x1 array of double, bsq format [80 bytes]
+    c7: 1x10x1 array of uint16, bsq format [20 bytes]
+    c8: 1x10x1 array of int, bsq format [40 bytes]
+    c9: 1x10x1 array of uint32, bsq format [40 bytes]
+    c10: 1x10x1 array of float, bsq format [40 bytes]
+    c11: 1x10x1 array of double, bsq format [80 bytes]
+    c12: Text Buffer with 10 lines of text
+        1: hello
+        2: hello
+        3: hello
+        4: hello
+        5: hello
+        6: hello
+        7: hello
+        8: hello
+        9: hello
+        10: hello
+struct, 14 elements
+    c1: 1x10x1 array of int8, bsq format [10 bytes]
+    c2: 1x10x1 array of uint16, bsq format [20 bytes]
+    c3: 1x10x1 array of int, bsq format [40 bytes]
+    c4: 1x10x1 array of uint32, bsq format [40 bytes]
+    c5: 1x10x1 array of float, bsq format [40 bytes]
+    c6: 1x10x1 array of double, bsq format [80 bytes]
+    c7: 1x10x1 array of uint16, bsq format [20 bytes]
+    c8: 1x10x1 array of int, bsq format [40 bytes]
+    c9: 1x10x1 array of uint32, bsq format [40 bytes]
+    c10: 1x10x1 array of float, bsq format [40 bytes]
+    c11: 1x10x1 array of double, bsq format [80 bytes]
+    c12_0: Text Buffer with 10 lines of text
+        1: hello0
+        2: hello0
+        3: hello0
+        4: hello0
+        5: hello0
+        6: hello0
+        7: hello0
+        8: hello0
+        9: hello0
+        10: hello0
+    c12_1: Text Buffer with 10 lines of text
+        1: hello1
+        2: hello1
+        3: hello1
+        4: hello1
+        5: hello1
+        6: hello1
+        7: hello1
+        8: hello1
+        9: hello1
+        10: hello1
+    c12_2: Text Buffer with 10 lines of text
+        1: hello2
+        2: hello2
+        3: hello2
+        4: hello2
+        5: hello2
+        6: hello2
+        7: hello2
+        8: hello2
+        9: hello2
+        10: hello2

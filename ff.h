@@ -1,5 +1,11 @@
 #ifndef _FF_H_
 #define _FF_H_
+
+
+// TODO(rswinkle):
+// This needs parser.h not just parser_types.h because it needs func.h
+// I really need to make func.h just the function prototypes needed for this file
+// and move everything else into appropriate headers
 #include "parser.h"
 
 /**
@@ -48,10 +54,25 @@ struct _vfuncptr vfunclist[] = {
 
     /* format conversion routines.  All just shorthand for ff_conv() */
 
+    // TODO(rswinkle) ifdef arch for 64 bit ints?
+    {"uint8", ff_conv, (void*)DV_UINT8, NULL},
+    {"uint16", ff_conv, (void*)DV_UINT16, NULL},
+    {"uint32", ff_conv, (void*)DV_UINT32, NULL},
+    {"uint64", ff_conv, (void*)DV_UINT64, NULL},
+
+    {"int8", ff_conv, (void*)DV_INT8, NULL},
+    {"int16", ff_conv, (void*)DV_INT16, NULL},
+    {"int32", ff_conv, (void*)DV_INT32, NULL},
+    {"int64", ff_conv, (void*)DV_INT64, NULL},
+
+
+    // We should get rid of this, char in C is usually signed
+    // though the spec says it's implementation defined iirc
     {"char", ff_conv, (void*)DV_UINT8, NULL},
     {"byte", ff_conv, (void*)DV_UINT8, NULL},
     {"short", ff_conv, (void*)DV_INT16, NULL},
     {"int", ff_conv, (void*)DV_INT32, NULL},
+
     {"float", ff_conv, (void*)DV_FLOAT, NULL},
     {"double", ff_conv, (void*)DV_DOUBLE, NULL},
 
@@ -342,9 +363,9 @@ struct _vfuncptr vfunclist[] = {
     /*  { "blend",             ff_blend,          NULL, NULL }, */
     {"text", ff_create_text, NULL, NULL},
 
-    {"pdshead", ff_pdshead, NULL, NULL},
+    {"pdshead", ff_pdshead, NULL, NULL}
 
-    {NULL, NULL, NULL, NULL}
+    //{NULL, NULL, NULL, NULL}
 
 };
 

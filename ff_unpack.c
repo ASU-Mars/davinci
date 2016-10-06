@@ -39,9 +39,6 @@
 
 #define MAX_ATTRIBUTES 500
 
-//TODO(rswinkle) change to uint8 or typedef'd uint8
-typedef unsigned char byte;
-
 // filled in parse_template()
 typedef struct {
 	char type;                 // type constant from above defines
@@ -62,10 +59,10 @@ typedef struct {
 // array of this is returned from unpack function to ff_unpack
 typedef struct {
 	column_attributes* input; // address of appropriate element in attr array above
-	byte* array;              // array to actually store the column data, NULL if type is string
+	u8* array;                // array to actually store the column data, NULL if type is string
 	char** strarray;          // array to store column data if type is string, NULL otherwise
 	short numbytes;           // set equal to adj_bytesize
-	char type;                // set equal to final type (after conversions in upgrade_types() )
+	char type;                // set equal to final type
 } data;
 
 static int convert_types(data* thedata, int num_items, int rows);
@@ -73,27 +70,25 @@ static int convert_types(data* thedata, int num_items, int rows);
 static data* unpack(char*, char*, Var*, int, int*, int*);
 static unpack_digest* parse_template(char* template, column_attributes* input, Var* column_names, int*);
 static int validate_template(unpack_digest* input);
-static int read_data(byte*, data*, unpack_digest*, FILE*, int);
+static int read_data(u8*, data*, unpack_digest*, FILE*, int);
 static int calc_rows(char*, int, unpack_digest*, int);
 static data* allocate_arrays(unpack_digest*);
 static void compute_adj_bytes(unpack_digest*);
 
+
+#ifdef FF_UNPACK_DEBUG
 static int print_data(data* the_data, unpack_digest* input);
-static int upgrade_types(data*, unpack_digest*);
+#endif
+//static int upgrade_types(data*, unpack_digest*);
 
-static int resize_array(data* the_data, int rows, int columns, int type);
-static int test_signed_char(data* the_data, int rows, int columns);
-static int test_signed_short(data* the_data, int rows, int columns);
-static int test_int_max(data* the_data, int rows, int columns);
-
-static void clean_up(int, unpack_digest*, byte*, data*, FILE*);
+static void clean_up(int, unpack_digest*, u8*, data*, FILE*);
 
 static int pack(data*, char*, char*, int, int, int);
 static data* parse_struct(Var*, Var*, int*, int*);
 static data* format_data(data*, unpack_digest*);
-static int write_data(byte* buffer, data* the_data, unpack_digest* input, int row);
+static int write_data(u8* buffer, data* the_data, unpack_digest* input, int row);
 static void cleanup_data(data*, int);
-static int pack_row(data* the_data, unpack_digest* digest, int row, byte* buffer);
+static int pack_row(data* the_data, unpack_digest* digest, int row, u8* buffer);
 
 /*premade calls for testing:
 
@@ -187,15 +182,27 @@ static int convert_types(data* thedata, int num_items, int rows)
 		switch (thedata[i].type) {
 		case SIGNED_LSB_INT:
 		case SIGNED_MSB_INT:
-			if (thedata[i].numbytes == 2)
-				thedata[i].type = DV_INT16;
-			else
-				thedata[i].type = DV_INT32;
+			switch (thedata[i].numbytes) {
+			case 1: thedata[i].type = DV_INT8; break;
+			case 2: thedata[i].type = DV_INT16; break;
+			case 3:
+			case 4: thedata[i].type = DV_INT32; break;
+			default:
+				thedata[i].type = DV_INT64; break;
+			}
 			break;
 
 		case UNSIGNED_LSB_INT:
 		case UNSIGNED_MSB_INT:
-			thedata[i].type = DV_UINT8; break;
+			switch (thedata[i].numbytes) {
+			case 1: thedata[i].type = DV_UINT8; break;
+			case 2: thedata[i].type = DV_UINT16; break;
+			case 3:
+			case 4: thedata[i].type = DV_UINT32; break;
+			default:
+				thedata[i].type = DV_UINT64; break;
+			}
+			break;
 
 		case LSB_FLOAT:
 		case MSB_FLOAT:
@@ -228,7 +235,7 @@ static data* unpack(char* template, char* filename, Var* column_names, int hdr_l
 	column_attributes* initial = NULL;
 	unpack_digest* input       = NULL;
 	FILE* file                 = NULL;
-	byte* buffer               = NULL;
+	u8* buffer                 = NULL;
 	data* thedata              = NULL;
 	void* temp_ptr             = NULL;
 
@@ -306,9 +313,9 @@ static data* unpack(char* template, char* filename, Var* column_names, int hdr_l
 		}
 	}
 
-	buffer = (byte*)calloc(rec_length + 2, sizeof(byte)); // not sure if extra 2 are needed but jic
+	buffer = (u8*)calloc(rec_length + 2, sizeof(u8)); // not sure if extra 2 are needed but jic
 	if (buffer == NULL) {
-		memory_error(errno, rec_length * sizeof(byte));
+		memory_error(errno, rec_length * sizeof(u8));
 		clean_up(0, input, NULL, NULL, file);
 		return NULL;
 	}
@@ -340,11 +347,14 @@ static data* unpack(char* template, char* filename, Var* column_names, int hdr_l
 		}
 	}
 
-	// upgrade types if necessary (ie unsigned shorts and ints to ints and doubles)
+#if 0
+	// see comment above upgrade_types
+	// change types if necessary ie 3, 5-7 byte int types to appropriate
 	if (!upgrade_types(thedata, input)) {
 		clean_up(2, input, buffer, thedata, file);
 		return NULL;
 	}
+#endif
 
 #ifdef FF_UNPACK_DEBUG
 	print_data(thedata, input);
@@ -363,7 +373,7 @@ static data* unpack(char* template, char* filename, Var* column_names, int hdr_l
 }
 
 /* clean up function called on errors */
-static void clean_up(int level, unpack_digest* input, byte* buffer, data* the_data, FILE* file)
+static void clean_up(int level, unpack_digest* input, u8* buffer, data* the_data, FILE* file)
 {
 	int i, j;
 	int num_items = input->num_items;
@@ -389,7 +399,7 @@ static void clean_up(int level, unpack_digest* input, byte* buffer, data* the_da
 		}
 	}
 
-	if (file != NULL) fclose(file);
+	if (file) fclose(file);
 }
 
 static int validate_template(unpack_digest* input)
@@ -405,8 +415,8 @@ static int validate_template(unpack_digest* input)
 		case UNSIGNED_MSB_INT:
 		case SIGNED_LSB_INT:
 		case UNSIGNED_LSB_INT:
-			if (input->attr[i].bytesize < 1 || input->attr[i].bytesize > 4) {
-				parse_error("Invalid bytesize (%d) for column %d of type %c\nValid values are 1-4",
+			if (input->attr[i].bytesize < 1 || input->attr[i].bytesize > 8) {
+				parse_error("Invalid bytesize (%d) for column %d of type %c\nValid values are 1-8",
 				            input->attr[i].bytesize, i + 1, input->attr[i].type);
 				return 0;
 			}
@@ -569,8 +579,9 @@ static unpack_digest* parse_template(char* template, column_attributes* input, V
 			}
 
 			template = end;
-		} else
+		} else {
 			input[j].columns = 1;
+		}
 
 		if (input[j].type != IGNORE) {
 			if (input[j].col_name == NULL) {
@@ -672,12 +683,15 @@ static void compute_adj_bytes(unpack_digest* input)
 		if (a == SIGNED_MSB_INT || a == UNSIGNED_MSB_INT || a == SIGNED_LSB_INT || a == UNSIGNED_LSB_INT) {
 			if (attr_array[i].bytesize == 3)
 				attr_array[i].adj_bytesize = 4;
+			else if (attr_array[i].bytesize >= 5)
+				attr_array[i].adj_bytesize = 8;
 			else
 				attr_array[i].adj_bytesize = attr_array[i].bytesize;
-		} else if (a == STRING)
+		} else if (a == STRING) {
 			attr_array[i].adj_bytesize = attr_array[i].bytesize + 1;
-		else
+		} else {
 			attr_array[i].adj_bytesize = attr_array[i].bytesize;
+		}
 	}
 }
 
@@ -741,10 +755,10 @@ static data* allocate_arrays(unpack_digest* digest)
 			all_data[i].array = NULL;
 		} else {
 			all_data[i].array =
-			    (byte*)calloc(input[i].columns * input[i].adj_bytesize * rows, sizeof(byte));
+			    (u8*)calloc(input[i].columns * input[i].adj_bytesize * rows, sizeof(u8));
 			if (all_data[i].array == NULL) {
 				err_num = errno;
-				mem_num = input[i].columns * input[i].adj_bytesize * rows * sizeof(byte);
+				mem_num = input[i].columns * input[i].adj_bytesize * rows * sizeof(u8);
 				break;
 			}
 
@@ -776,17 +790,21 @@ static data* allocate_arrays(unpack_digest* digest)
 }
 
 /* print function for debugging */
+
+#ifdef FF_UNPACK_DEBUG
 static int print_data(data* the_data, unpack_digest* input)
 {
 	int i, j, k;
 
 	double tempdouble;
 	float tempfloat;
-	int tempint;
-	unsigned int utempint;
-	short tempshort;
-	unsigned short utempshort;
-	char signedbyte;
+	i64 tmpi64;
+	u64 tmpu64;
+	i32 tempint;
+	u32 utempint;
+	i16 tempshort;
+	u16 utempshort;
+	i8 signedbyte;
 
 	int bytesize;
 	int columns;
@@ -825,7 +843,10 @@ static int print_data(data* the_data, unpack_digest* input)
 
 				case SIGNED_MSB_INT:
 				case SIGNED_LSB_INT:
-					if (bytesize == 4) {
+					if (bytesize == 8) {
+						memcpy(&tmpi64, &the_data[j].array[(i * columns + k) * 8], 8);
+						printf("%ld\t", tmpi64);
+					} else if (bytesize == 4) {
 						memcpy(&tempint, &the_data[j].array[(i * columns + k) * 4], 4);
 						printf("%d\t", tempint);
 					} else if (bytesize == 2) {
@@ -833,21 +854,25 @@ static int print_data(data* the_data, unpack_digest* input)
 						printf("%d\t", tempshort);
 					} else {
 						// memcpy(&signedbyte, &the_data[j].array[i*columns[j]+k], 1);
-						signedbyte = (char)the_data[j].array[i * columns + k];
+						signedbyte = (i8)the_data[j].array[i * columns + k];
 						printf("%d\t", signedbyte);
 					}
 					break;
 
 				case UNSIGNED_MSB_INT:
 				case UNSIGNED_LSB_INT:
-					if (bytesize == 4) {
+					if (bytesize == 8) {
+						memcpy(&tmpu64, &the_data[j].array[(i * columns + k) * 8], 8);
+						printf("%lu\t", tmpu64);
+					} else if (bytesize == 4) {
 						memcpy(&utempint, &the_data[j].array[(i * columns + k) * 4], 4);
 						printf("%u\t", utempint);
 					} else if (bytesize == 2) {
 						memcpy(&utempshort, &the_data[j].array[(i * columns + k) * 2], 2);
 						printf("%u\t", utempshort);
-					} else
+					} else {
 						printf("%u\t", the_data[j].array[i * columns + k]);
+					}
 					break;
 
 				default:
@@ -862,19 +887,20 @@ static int print_data(data* the_data, unpack_digest* input)
 	}
 	return 1;
 }
+#endif
 
 /*
     reads data into buf, performs necessary manipulations (like byteswapping)
     then stores into correct location (loc) in the_data->array
 */
-static int read_data(byte* buffer, data* the_data, unpack_digest* input, FILE* file, int row)
+static int read_data(u8* buffer, data* the_data, unpack_digest* input, FILE* file, int row)
 {
-	int tempint           = 0;
-	unsigned int utempint = 0;
+	i64 tmp_i64 = 0;
+	u64 tmp_u64 = 0;
 
-	byte* mybyte = NULL;
-	byte* loc    = NULL;
-	byte* buf    = NULL;
+	u8* mybyte = NULL;
+	u8* loc    = NULL;
+	u8* buf    = NULL;
 
 	int i, j, k;
 
@@ -902,41 +928,49 @@ static int read_data(byte* buffer, data* the_data, unpack_digest* input, FILE* f
 
 				break;
 
-			case LSB_DOUBLE: // double precision float (LSB)
-			case LSB_FLOAT:  // single precision float (LSB)
+			case LSB_DOUBLE:
+			case LSB_FLOAT:
 				LSB(buf, 1, numbytes);
 				memcpy(loc, buf, al_bytes);
 
 				break;
 
-			case MSB_DOUBLE: // double precision float (MSB)
-			case MSB_FLOAT:  // single precision float (MSB)
+			case MSB_DOUBLE:
+			case MSB_FLOAT:
 				MSB(buf, 1, numbytes);
 				memcpy(loc, buf, al_bytes);
 
 				break;
 
 			case SIGNED_MSB_INT:
-			case SIGNED_LSB_INT: tempint = 0; mybyte = (byte*)&tempint;
+			case SIGNED_LSB_INT: tmp_i64 = 0; mybyte = (u8*)&tmp_i64;
 
 #ifdef WORDS_BIGENDIAN
 				if (letter == SIGNED_LSB_INT) {
-					for (i = 0; i < numbytes; i++) mybyte[3 - (4 - numbytes) - i] = buf[i];
-					tempint = tempint >> ((4 - numbytes) * 8);
+					for (i = 0; i < numbytes; i++) {
+						mybyte[7 - (8 - numbytes) - i] = buf[i];
+					}
+					tmp_i64 = tmp_i64 >> ((8 - numbytes) * 8);
 				} else {
-					for (i = 0; i < numbytes; i++) mybyte[i] = buf[i];
-					tempint                                  = tempint >> ((4 - numbytes) * 8);
+					for (i = 0; i < numbytes; i++) {
+						mybyte[i] = buf[i];
+					}
+					tmp_i64 = tmp_i64 >> ((8 - numbytes) * 8);
 				}
 
-				memcpy(loc, &mybyte[4 - al_bytes], al_bytes);
+				memcpy(loc, &mybyte[8 - al_bytes], al_bytes);
 
 #else
 				if (letter == SIGNED_MSB_INT) {
-					for (i = 0; i < numbytes; i++) mybyte[3 - i] = buf[i];
-					tempint                                      = tempint >> ((4 - numbytes) * 8);
+					for (i = 0; i < numbytes; i++) {
+						mybyte[7 - i] = buf[i];
+					}
+					tmp_i64 = tmp_i64 >> ((8 - numbytes) * 8);
 				} else {
-					for (i = 0; i < numbytes; i++) mybyte[3 - (numbytes - 1) + i] = buf[i];
-					tempint = tempint >> ((4 - numbytes) * 8);
+					for (i = 0; i < numbytes; i++) {
+						mybyte[7 - (numbytes - 1) + i] = buf[i];
+					}
+					tmp_i64 = tmp_i64 >> ((8 - numbytes) * 8);
 				}
 				memcpy(loc, mybyte, al_bytes);
 
@@ -944,22 +978,30 @@ static int read_data(byte* buffer, data* the_data, unpack_digest* input, FILE* f
 				break;
 
 			case UNSIGNED_MSB_INT:
-			case UNSIGNED_LSB_INT: utempint = 0; mybyte = (byte*)&utempint;
+			case UNSIGNED_LSB_INT: tmp_u64 = 0; mybyte = (u8*)&tmp_u64;
 
 #ifdef WORDS_BIGENDIAN
 				if (letter == UNSIGNED_LSB_INT) {
-					for (i = 0; i < numbytes; i++) mybyte[3 - i] = buf[i];
+					for (i = 0; i < numbytes; i++) {
+						mybyte[7 - i] = buf[i];
+					}
 				} else {
-					for (i = 0; i < numbytes; i++) mybyte[i + (4 - numbytes)] = buf[i];
+					for (i = 0; i < numbytes; i++) {
+						mybyte[i + (8 - numbytes)] = buf[i];
+					}
 				}
 
-				memcpy(loc, &mybyte[4 - al_bytes], al_bytes);
+				memcpy(loc, &mybyte[8 - al_bytes], al_bytes);
 
 #else
 				if (letter == UNSIGNED_MSB_INT) {
-					for (i = 0; i < numbytes; i++) mybyte[numbytes - 1 - i] = buf[i];
+					for (i = 0; i < numbytes; i++) {
+						mybyte[numbytes - 1 - i] = buf[i];
+					}
 				} else {
-					for (i = 0; i < numbytes; i++) mybyte[i] = buf[i];
+					for (i = 0; i < numbytes; i++) {
+						mybyte[i] = buf[i];
+					}
 				}
 
 				memcpy(loc, mybyte, al_bytes);
@@ -983,14 +1025,19 @@ static int read_data(byte* buffer, data* the_data, unpack_digest* input, FILE* f
 	return 1;
 }
 
-/*
-    resize types if necessary because davinci only supports unsigned bytes
-    and signed shorts and ints.  So this checks and possibly converts the following:
-        signed bytes 	->		shorts (required conversion)
-        unsigned shorts	->		ints
-        unsigned ints	->		doubles (floats have inadequate precision)
-*/
 
+
+// upgrade_types() is now a no-op function since Davinci now supports all types.
+// We could change this to try to fit the data in the smallest possible
+// type to try to save memory
+//
+// ie if they specified a i8 but it fits in an i4 , or even more specific
+// they specified an i8 but it fits in a u4 (but not an i4).  This downsizability
+// would apply to all integer types if we really wanted
+//
+// but I don't think it's worth it.
+
+#if 0
 static int upgrade_types(data* the_data, unpack_digest* input)
 {
 	int i, j;
@@ -1014,44 +1061,11 @@ static int upgrade_types(data* the_data, unpack_digest* input)
 		switch (type) {
 		case SIGNED_MSB_INT:
 		case SIGNED_LSB_INT:
-			if (bytesize == 1) {
-				j = test_signed_char(&the_data[i], rows, columns);
 
-				if (j < rows * columns) {
-					if (!resize_array(&the_data[i], rows, columns, 0)) return 0;
-
-				} else {
-					the_data[i].type = UNSIGNED_LSB_INT;
-				}
-			}
 			break;
 
 		case UNSIGNED_MSB_INT:
 		case UNSIGNED_LSB_INT:
-			if (bytesize == 4) {
-				j = test_int_max(&the_data[i], rows, columns);
-
-				if (j < rows * columns) {
-					if (!resize_array(&the_data[i], rows, columns, 2)) return 0;
-
-					the_data[i].type = LSB_DOUBLE;
-
-				} else {
-					the_data[i].type = SIGNED_LSB_INT;
-				}
-			}
-
-			if (bytesize == 3) the_data[i].type = SIGNED_LSB_INT;
-
-			if (bytesize == 2) {
-				j = test_signed_short(&the_data[i], rows, columns);
-
-				if (j < rows * columns) {
-					if (!resize_array(&the_data[i], rows, columns, 1)) return 0;
-				}
-
-				the_data[i].type = SIGNED_LSB_INT;
-			}
 			break;
 
 		default: break;
@@ -1060,97 +1074,8 @@ static int upgrade_types(data* the_data, unpack_digest* input)
 
 	return 1;
 }
+#endif
 
-// resize_array does upcasts for upgrade_types()
-// type		original					new
-// 0		signed byte (i.e. char)		signed short
-// 1		unsigned short				signed int
-// 2		unsigned int				signed double
-static int resize_array(data* the_data, int rows, int columns, int type)
-{
-	int i    = 0;
-	int size = 0;
-
-	short* tmpshrtarray = NULL;
-	int* tmpintarray    = NULL;
-	double* tmpdblarray = NULL;
-	void* temp_ptr      = NULL;
-
-	if (type == 0)
-		size = 2;
-	else if (type == 1)
-		size = 4;
-	else if (type == 2)
-		size = 8;
-	else {
-		parse_error("Unrecognized type constant in resize_array(): %d", type);
-		return 0;
-	}
-
-	temp_ptr        = the_data->array;
-	the_data->array = (byte*)realloc(the_data->array, size * rows * columns);
-	if (the_data->array == NULL) {
-		memory_error(errno, size * rows * columns);
-		the_data->array = (byte*)temp_ptr;
-		return 0;
-	}
-
-	switch (type) {
-	case 0:
-		tmpshrtarray = (short*)the_data->array;
-		for (i = rows * columns - 1; i >= 0; i--) tmpshrtarray[i] = *((char*)(&the_data->array[i]));
-		break;
-
-	case 1:
-		tmpintarray = (int*)the_data->array;
-		for (i             = rows * columns - 1; i >= 0; i--)
-			tmpintarray[i] = *(unsigned short*)&the_data->array[i * 2];
-		break;
-
-	case 2:
-		tmpdblarray = (double*)the_data->array;
-		for (i             = rows * columns - 1; i >= 0; i--)
-			tmpdblarray[i] = *(unsigned int*)&the_data->array[i * 4];
-		break;
-	}
-
-	the_data->numbytes = size;
-
-	return 1;
-}
-
-static int test_signed_char(data* the_data, int rows, int columns)
-{
-	int i;
-	char tempchar = 0;
-	for (i = 0; i < rows * columns; i++) {
-		memcpy(&tempchar, &the_data->array[i], 1);
-		if (tempchar < 0) break;
-	}
-	return i;
-}
-
-static int test_int_max(data* the_data, int rows, int columns)
-{
-	int i;
-	unsigned int uint = 0;
-	for (i = 0; i < rows * columns; i++) {
-		memcpy(&uint, &the_data->array[i * 4], 4);
-		if (uint > INT_MAX) break;
-	}
-	return i;
-}
-
-static int test_signed_short(data* the_data, int rows, int columns)
-{
-	int i;
-	short tempshort = 0;
-	for (i = 0; i < rows * columns; i++) {
-		memcpy(&tempshort, &the_data->array[i * 2], 2);
-		if (tempshort < 0) break;
-	}
-	return i;
-}
 
 // ********************************************* Begin Pack Implementation Functions
 // **************************************************** //
@@ -1258,25 +1183,9 @@ Var* ff_pack(vfuncptr func, Var* arg)
 static void cleanup_data(data* reg_data, int i)
 {
 	while (--i >= 0) {
-		if (reg_data[i].input != NULL) {
-			/*// didn't use
-			if(reg_data[i].input->col_name != NULL)
-			{
-			    free(reg_data[i].input->col_name);
-			}*/
+		if (reg_data[i].input) {
 			free(reg_data[i].input);
 		}
-
-		/*// from clean_up()
-		if( reg_data[i].input->type == STRING )
-		{
-		    for(j=0; j<rows; j++)
-		        free(reg_data[i].strarray[j]);
-
-		    free(reg_data[i].strarray);
-		} else
-		    free(reg_data[i].array);
-		*/
 	}
 	free(reg_data);
 }
@@ -1429,19 +1338,19 @@ static int pack(data* thedata, char* template, char* filename, int numData, int 
 	column_attributes* initial = NULL; // used to parse template
 	unpack_digest* digest      = NULL;
 	FILE* file                 = NULL;
-	byte* buffer               = NULL;
+	u8* buffer               = NULL;
 
 	// check thedata argument, can't pack what doesn't exist
 	if (thedata == NULL) {
 		parse_error("Error, no input data was provided.");
-		return 0; // NULL;
+		return 0;
 	}
 
 	// create an initial column_attributes to work with
 	initial = (column_attributes*)calloc(MAX_ATTRIBUTES, sizeof(column_attributes));
 	if (initial == NULL) {
 		memory_error(errno, sizeof(column_attributes) * MAX_ATTRIBUTES);
-		return 0; // NULL;
+		return 0;
 	}
 
 	// create an unpack_digest with computed: digest->attr and ->num_items. ->rows set to -1, also
@@ -1449,7 +1358,7 @@ static int pack(data* thedata, char* template, char* filename, int numData, int 
 	digest = parse_template(template, initial, NULL, &rec_length);
 	if (digest == NULL) {
 		free(initial);
-		return 0; // NULL;
+		return 0;
 	}
 
 	// if (digest->num_items > numData) // user specified more columns to pack than he/she had given
@@ -1458,7 +1367,7 @@ static int pack(data* thedata, char* template, char* filename, int numData, int 
 		parse_error("Error: #columns in struct (%d) != #columns named for packing (%d)", numData,
 		            digest->num_items);
 		clean_up(0, digest, NULL, NULL, NULL);
-		return 0; // NULL;
+		return 0;
 	}
 
 	digest->rows = rows;
@@ -1466,7 +1375,7 @@ static int pack(data* thedata, char* template, char* filename, int numData, int 
 	// validate the input template (checks allowable byte sizes)
 	if (!validate_template(digest)) {
 		clean_up(0, digest, NULL, NULL, NULL);
-		return 0; // NULL;
+		return 0;
 	}
 
 	//*// reallocate the initial column_attributes to match the amount specified in digest?
@@ -1474,7 +1383,7 @@ static int pack(data* thedata, char* template, char* filename, int numData, int 
 	if (initial == NULL) {
 		memory_error(errno, sizeof(column_attributes) * digest->num_items);
 		clean_up(0, digest, NULL, NULL, NULL);
-		return 0; // NULL;
+		return 0;
 	} else {
 		digest->attr = initial;
 	}
@@ -1486,40 +1395,40 @@ static int pack(data* thedata, char* template, char* filename, int numData, int 
 		if (file == NULL) {
 			parse_error("%s: %s", "Error opening file", strerror(errno));
 			clean_up(0, digest, NULL, NULL, NULL);
-			return 0; // NULL;
+			return 0;
 		}
 	}
 
 	if (fseek(file, offset, SEEK_SET)) { // skip to start
 		parse_error("file %s seek error: %s", filename, strerror(errno));
 		clean_up(0, digest, NULL, NULL, file);
-		return 0; // NULL;
+		return 0;
 	}
 
-	buffer = (byte*)calloc(rec_length + 2, sizeof(byte)); // output buffer +2 (for '\0')
+	buffer = (u8*)calloc(rec_length + 2, sizeof(u8)); // output buffer +2 (for '\0')
 	if (buffer == NULL) {
-		memory_error(errno, rec_length * sizeof(byte));
+		memory_error(errno, rec_length * sizeof(u8));
 		clean_up(0, digest, NULL, NULL, file);
-		return 0; // NULL;
+		return 0;
 	}
 
 	// rows calculated before entering pack()
 	for (i = 0; i < rows; i++) {
 		// clear the output record buffer
-		memset(buffer, '\0', rec_length);
+		memset(buffer, 0, rec_length);
 
 		// write data into buffer
 		if (!pack_row(thedata, digest, i, buffer)) {
 			parse_error("Error in writing data to buffer");
 			clean_up(2, digest, buffer, thedata, file);
-			return 0; // NULL;
+			return 0;
 		}
 
 		// write data to file
-		if (fwrite(buffer, sizeof(byte), rec_length, file) != rec_length) {
+		if (!fwrite(buffer, rec_length, 1, file)) {
 			parse_error("Error writing data: %s", strerror(errno));
 			clean_up(2, digest, buffer, thedata, file);
-			return 0; // NULL;
+			return 0;
 		}
 	}
 
@@ -1532,6 +1441,7 @@ static int pack(data* thedata, char* template, char* filename, int numData, int 
 }
 
 //TODO(rswinkle) why aren't we using our existing swapping functions?
+// see endian_norm.c/h dvio_tdb.c dvio_specpr.c/h
 static void copy(const void* from, void* to, int len, int swap)
 {
 	int i;
@@ -1543,67 +1453,76 @@ static void copy(const void* from, void* to, int len, int swap)
 
 static int convert_to_ext_fmt(void* from, int ffmt, char* to, int tfmt, int tolen)
 {
-	int si;
-	unsigned int ui;
-	short ss;
-	unsigned short us;
-	char sc;
-	unsigned char uc;
+	u64 tmpu64;
+	i64 tmpi64;
+
+	i32 tmpi32;
+	u32 tmpu32;
+	i16 tmpi16;
+	u16 tmpu16;
+	i8 tmpi8;
+	u8 tmpu8;
 	float f;
 	double d;
+
 	int big   = 0;
+	
+	// NOTE(rswinkle): Not a huge fan of alloca()
 	char* str = alloca(tolen > 1024 ? tolen + 1 : 1024);
 
-	// convert from type to large internal numeric types
 	switch (ffmt) {
-	case DV_UINT8:
-		ui = *(unsigned char*)from;
-		si = (int)ui;
-		d  = (double)ui;
-		break;
-	case DV_INT16:
-		si = *(short*)from;
-		ui = (unsigned int)si;
-		d  = (double)si;
-		break;
-	case DV_INT32:
-		si = *(int*)from;
-		ui = (unsigned int)si;
-		d  = (double)si;
-		break;
+	case DV_UINT8:  tmpi64 = tmpu64 = *(u8*)from; break;
+	case DV_UINT16: tmpi64 = tmpu64 = *(u16*)from; break;
+	case DV_UINT32: tmpi64 = tmpu64 = *(u32*)from; break;
+	case DV_UINT64: tmpi64 = tmpu64 = *(u64*)from; break;
+
+	case DV_INT8:   tmpu64 = tmpi64 = *(i8*)from; break;
+	case DV_INT16:  tmpu64 = tmpi64 = *(i16*)from; break;
+	case DV_INT32:  tmpu64 = tmpi64 = *(i32*)from; break;
+	case DV_INT64:  tmpu64 = tmpi64 = *(i64*)from; break;
+	
 	case DV_FLOAT:
-		d  = *(float*)from;
-		ui = (unsigned int)d;
-		si = (int)d;
+		f = *(float*)from;
+		tmpu64 = (u64)f;
+		tmpi64 = (i64)f;
 		break;
 	case DV_DOUBLE:
-		d  = *(double*)from;
-		ui = (unsigned int)d;
-		si = (int)d;
+		d = *(double*)from;
+		tmpu64 = (u64)d;
+		tmpi64 = (i64)d;
 		break;
+
 	case ID_STRING:
 		d  = atof(from);
-		ui = strtoul(from, NULL, 10);
-		si = atoi(from);
+		tmpu64 = strtoull(from, NULL, 10);
+		tmpi64 = atoll(from);
 		break;
 	default: return 0;
 	}
 
 	// add conversions for other numeric types
-	us = (unsigned short)ui;
-	ss = (short)si;
-	uc = (unsigned char)ui;
-	sc = (char)si;
-	f  = (float)d;
+	tmpu32 = tmpu64;
+	tmpi32 = tmpi64;
+	tmpu16 = tmpu32;
+	tmpi16 = tmpi32;
+	tmpu8 = tmpu32;
+	tmpi8 = tmpi32;
 
 	if (tfmt == STRING) {
 		switch (ffmt) {
-		case DV_UINT8: sprintf(str, "%u", ui); break;
+		case DV_UINT8:
+		case DV_UINT16:
+		case DV_UINT32:
+		case DV_UINT64: sprintf(str, "%lu", tmpu64); break;
+
+		case DV_INT8:
 		case DV_INT16:
-		case DV_INT32: sprintf(str, "%d", si); break;
+		case DV_INT32:
+		case DV_INT64: sprintf(str, "%d", tmpi32); break;
+
 		case DV_FLOAT:
 		case DV_DOUBLE: sprintf(str, "%g", d); break;
-		case ID_STRING: sprintf(str, "%s", from); break;
+		case ID_STRING: sprintf(str, "%s", (char*)from); break;
 		default: return 0;
 		}
 	}
@@ -1615,7 +1534,7 @@ static int convert_to_ext_fmt(void* from, int ffmt, char* to, int tfmt, int tole
 	big = 0;
 #endif
 
-	// write data out, byte-swapping as needed
+	// write data out, u8-swapping as needed
 	switch (tfmt) {
 	case LSB_DOUBLE: copy(&d, to, sizeof(d), big ^ 0); break;
 	case MSB_DOUBLE: copy(&d, to, sizeof(d), big ^ 1); break;
@@ -1623,33 +1542,37 @@ static int convert_to_ext_fmt(void* from, int ffmt, char* to, int tfmt, int tole
 	case MSB_FLOAT: copy(&f, to, sizeof(f), big ^ 1); break;
 	case SIGNED_LSB_INT:
 		switch (tolen) {
-		case 1: copy(&sc, to, sizeof(sc), big ^ 0); break;
-		case 2: copy(&ss, to, sizeof(ss), big ^ 0); break;
-		case 4: copy(&si, to, sizeof(si), big ^ 0); break;
+		case 1: copy(&tmpi8, to, sizeof(tmpi8), big ^ 0); break;
+		case 2: copy(&tmpi16, to, sizeof(tmpi16), big ^ 0); break;
+		case 4: copy(&tmpi32, to, sizeof(tmpi32), big ^ 0); break;
+		case 8: copy(&tmpi64, to, sizeof(tmpi64), big ^ 0); break;
 		default: return 0;
 		}
 		break;
 	case SIGNED_MSB_INT:
 		switch (tolen) {
-		case 1: copy(&sc, to, sizeof(sc), big ^ 1); break;
-		case 2: copy(&ss, to, sizeof(ss), big ^ 1); break;
-		case 4: copy(&si, to, sizeof(si), big ^ 1); break;
+		case 1: copy(&tmpi8, to, sizeof(tmpi8), big ^ 1); break;
+		case 2: copy(&tmpi16, to, sizeof(tmpi16), big ^ 1); break;
+		case 4: copy(&tmpi32, to, sizeof(tmpi32), big ^ 1); break;
+		case 8: copy(&tmpi64, to, sizeof(tmpi64), big ^ 1); break;
 		default: return 0;
 		}
 		break;
 	case UNSIGNED_LSB_INT:
 		switch (tolen) {
-		case 1: copy(&uc, to, sizeof(uc), big ^ 0); break;
-		case 2: copy(&us, to, sizeof(us), big ^ 0); break;
-		case 4: copy(&ui, to, sizeof(ui), big ^ 0); break;
+		case 1: copy(&tmpu8, to, sizeof(tmpu8), big ^ 0); break;
+		case 2: copy(&tmpu16, to, sizeof(tmpu16), big ^ 0); break;
+		case 4: copy(&tmpu32, to, sizeof(tmpu32), big ^ 0); break;
+		case 8: copy(&tmpu64, to, sizeof(tmpu64), big ^ 0); break;
 		default: return 0;
 		}
 		break;
 	case UNSIGNED_MSB_INT:
 		switch (tolen) {
-		case 1: copy(&uc, to, sizeof(uc), big ^ 1); break;
-		case 2: copy(&us, to, sizeof(us), big ^ 1); break;
-		case 4: copy(&ui, to, sizeof(ui), big ^ 1); break;
+		case 1: copy(&tmpu8, to, sizeof(tmpu8), big ^ 1); break;
+		case 2: copy(&tmpu16, to, sizeof(tmpu16), big ^ 1); break;
+		case 4: copy(&tmpu32, to, sizeof(tmpu32), big ^ 1); break;
+		case 8: copy(&tmpu64, to, sizeof(tmpu64), big ^ 1); break;
 		default: return 0;
 		}
 		break;
@@ -1660,14 +1583,14 @@ static int convert_to_ext_fmt(void* from, int ffmt, char* to, int tfmt, int tole
 	return 1;
 }
 
-// write_data(), inverse of read_data(). writes the data into a byte buffer
+// write_data(), inverse of read_data(). writes the data into a buffer
 // called by pack()
-// @param byte* buffer              // buffer to write data into
+// @param u8* buffer              // buffer to write data into
 // @param data* the_data            // data to write into buffer
 // @param unpack_digest* input      // input digest indicating how data should be written
 // @param int row                   // the current row in data to write
 // @return int indicating success:  // 1 = success, 0 = fail
-static int pack_row(data* the_data, unpack_digest* digest, int row, byte* buffer)
+static int pack_row(data* the_data, unpack_digest* digest, int row, u8* buffer)
 {
 	int i, j, k, numbytes, al_bytes, columns, start_byte;
 	char letter;
@@ -1687,8 +1610,8 @@ static int pack_row(data* the_data, unpack_digest* digest, int row, byte* buffer
 
 		// loop through columns in column attributes
 		for (k = 0; k < columns; k++) {
-			if (k >= src_columns) // src data has less columns than specified
-				continue;
+			if (k >= src_columns) // src data has fewer columns than specified
+				break;
 
 			// TODO - check for buffer overuns -- different for strings vs vals
 			if (src_type == ID_STRING) {

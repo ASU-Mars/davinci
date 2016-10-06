@@ -13,204 +13,235 @@
 
 */
 
-// TODO(rswinkle) replace with vec_void
-static int scope_count     = 0;
-static int scope_size      = 0;
-static Scope** scope_stack = NULL;
+static cvector_void scope_stack;
+
+
+void clean_scope(Scope*);
+
+void init_scope_stack()
+{
+	cvec_void(&scope_stack, 0, 8, sizeof(Scope), NULL, NULL);
+}
+
+
+int scope_stack_count()
+{
+	return scope_stack.size;
+}
+
+Scope* scope_stack_get(int i)
+{
+	return CVEC_GET_VOID(&scope_stack, Scope, i);
+}
+
+Scope* scope_stack_back()
+{
+	return cvec_back_void(&scope_stack);
+}
+
+
 
 void scope_push(Scope* s)
 {
-	if (scope_count == scope_size) {
-		scope_size  = max(scope_size * 2, 2);
-		scope_stack = (Scope**)my_realloc(scope_stack, scope_size * sizeof(Scope*));
-	}
-	scope_stack[scope_count++] = s;
+	cvec_push_void(&scope_stack, s);
 }
 
-Scope* scope_pop()
+void scope_pop()
 {
-	return (scope_stack[--scope_count]);
+	// TODO(rswinkle): use clean_scope as elem_free?
+	Scope* s = cvec_back_void(&scope_stack);
+	clean_scope(s);
+
+	cvec_pop_void(&scope_stack, NULL);
 }
 
 Scope* scope_tos()
 {
-	return (scope_stack[scope_count - 1]);
+	return (Scope*)cvec_back_void(&scope_stack);
 }
+
 Scope* global_scope()
 {
-	return (scope_stack[0]);
+	return (Scope*)&scope_stack.a[0];
 }
 
 Scope* parent_scope()
 {
-	int count = max(scope_count - 2, 0);
-	return (scope_stack[count]);
+	//TODO(rswinkle): why is parent -2 and not -1?
+	int count = (scope_stack.size > 2) ? scope_stack.size-2 : 0;
+	return CVEC_GET_VOID(&scope_stack, Scope, count);
 }
 
 Var* dd_find(Scope* s, char* name)
 {
-	Dictionary* dd = s->dd;
+	cvector_void* dd = &s->dd;
+	dict_item* p;
 
 	int i;
-	for (i = 1; i < dd->count; i++) {
-		if (dd->name[i] && !strcmp(dd->name[i], name)) {
-			return (dd->value[i]);
+	for (i = 1; i < dd->size; i++) {
+		p = CVEC_GET_VOID(dd, dict_item, i);
+		if (p->name && !strcmp(p->name, name)) {
+			return p->value;
 		}
 	}
-	return (NULL);
+	return NULL;
 }
 
 Var* dd_get_argv(Scope* s, int n)
 {
-	if (n < s->args->count) {
-		return (s->args->value[n]);
+	if (n < s->args.size) {
+		return CVEC_GET_VOID(&s->args, dict_item, n)->value;
 	}
-	return (NULL);
+	return NULL;
 }
 
 Var* dd_get_argc(Scope* s)
 {
-	return (newInt(s->args->count - 1));
+	return newInt(s->args.size - 1);
 }
 
 void dd_put(Scope* s, char* name, Var* v)
 {
-	Dictionary* dd = s->dd;
+	cvector_void* dd = &s->dd;
 	int i;
+	dict_item* p;
 
-	for (i = 1; i < dd->count; i++) {
-		if (!strcmp(dd->name[i], name)) {
-			dd->value[i] = v;
+	for (i = 1; i < dd->size; i++) {
+		p = CVEC_GET_VOID(dd, dict_item, i);
+		if (!strcmp(p->name, name)) {
+			p->value = v;
 			return;
 		}
 	}
-	if (dd->count == dd->size) {
-		dd->size  = max(dd->size * 2, 2);
-		dd->name  = (char**)my_realloc(dd->name, sizeof(char*) * dd->size);
-		dd->value = (Var**)my_realloc(dd->value, sizeof(Var*) * dd->size);
-	}
-	if (name == NULL || strlen(name) == 0)
-		dd->name[dd->count] = NULL;
-	else
-		dd->name[dd->count] = strdup(name); /* strdup here? */
-	dd->value[dd->count]    = v;
-	dd->count++;
+
+	// C99 spec 6.7.8.21
+	// If there are fewer initializers in a brace-enclosed list than there are
+	// elements or members of an aggregate, or fewer characters in a string
+	// literal used to initialize an array of known size than there are elements
+	// in the array, the remainder of the aggregate shall be initialized implicitly
+	// the same as objects that have static storage duration.
+	//
+	// Actually GNU99 allows empty braces too
+	dict_item item = { 0 };
+
+	if (name && strlen(name))
+		item.name = strdup(name); // strdup here?
+
+	item.value = v;
+	cvec_push_void(dd, &item);
 }
 
-/**
- ** stick an arg on the end of the arg list.
- ** Update argc.
- **/
+// stick an arg on the end of the arg list.
+// Update argc.
 int dd_put_argv(Scope* s, Var* v)
 {
-	Dictionary* dd = s->args;
+	cvector_void* dd = &s->args;
 
-	if (dd->count == dd->size) {
-		dd->size *= 2;
-		dd->value = (Var**)my_realloc(dd->value, sizeof(Var*) * dd->size);
-		dd->name  = (char**)my_realloc(dd->name, sizeof(char*) * dd->size);
-	}
 	/*
 	** WARNING: This looks like it will break if you try to global a
 	**          value that was passed.
 	*/
-	dd->value[dd->count] = v;
-	dd->name[dd->count]  = V_NAME(v);
-	V_NAME(v)            = NULL;
+	dict_item item = { 0 };
 
-	dd->count++;
+	item.value = v;
+	item.name = V_NAME(v);
+	V_NAME(v) = NULL;
 
-	/**
-	 ** subtract 1 for $0
-	 **/
-	V_INT(dd->value[0]) = dd->count - 1;
+	cvec_push_void(dd, &item);
 
-	return (dd->count - 1);
+	dict_item* p = CVEC_GET_VOID(dd, dict_item, 0);
+	// subtract 1 for $0
+	V_INT(p->value) = dd->size - 1;
+
+	return dd->size - 1;
 }
 
 void dd_unput_argv(Scope* s)
 {
-	Dictionary* dd = s->args;
+	cvector_void* dd = &s->args;
 	Var* v;
 	int i;
+	dict_item* p;
 
-	for (i = 1; i < dd->count; i++) {
-		v         = dd->value[i];
-		V_NAME(v) = dd->name[i];
+	for (i = 1; i < dd->size; i++) {
+		p = CVEC_GET_VOID(dd, dict_item, i);
+		v         = p->value;
+		V_NAME(v) = p->name;
 	}
 }
 
 int dd_argc(Scope* s)
 {
-	/**
-	 ** subtract 1 for $0
-	 **/
-	return (s->args->count - 1);
+	// subtract 1 for $0
+	return s->args.size - 1;
 }
 
-/**
- ** return argc as a Var
- **/
+// return argc as a Var
 Var* dd_argc_var(Scope* s)
 {
-	return (s->args->value[0]);
+	return CVEC_GET_VOID(&s->args, dict_item, 0);
 }
 
-/*
-**
-*/
 Var* dd_make_arglist(Scope* s)
 {
-	Dictionary* dd = s->args;
-	Var* v         = new_struct(dd->count);
+	cvector_void* dd = &s->args;
+	Var* v         = new_struct(dd->size);
 	Var* p;
 	int i;
 	void* zero;
+	dict_item* item;
 
-	for (i = 1; i < dd->count; i++) {
-		if (V_TYPE(dd->value[i]) == ID_UNK) {
-			zero = (char*)calloc(1, 1);
+	for (i = 1; i < dd->size; i++) {
+		item = CVEC_GET_VOID(dd, dict_item, i);
+		if (V_TYPE(item->value) == ID_UNK) {
+			zero = calloc(1, 1);
 			p    = newVal(BSQ, 1, 1, 1, DV_UINT8, zero);
 			mem_claim(p);
 		} else {
-			p = V_DUP(dd->value[i]);
+			p = V_DUP(item->value);
 		}
-		add_struct(v, dd->name[i], p);
+		add_struct(v, item->name, p);
 	}
-	return (v);
+	return v;
 }
 
-Dictionary* new_dd()
+void init_dd(cvector_void* d)
 {
-	Dictionary* d;
-	d        = (Dictionary*)calloc(1, sizeof(Dictionary));
-	d->value = (Var**)calloc(1, sizeof(Var*));
-	d->size  = 1;
-	d->count = 1;
+	cvec_void(d, 1, 1, sizeof(dict_item), NULL, NULL);
 
-	/**
-	 ** Make a var for $argc
-	 **/
-	d->value[0] = (Var*)calloc(1, sizeof(Var));
-	make_sym(d->value[0], DV_INT32, (char*)"0");
-	V_TYPE(d->value[0]) = ID_VAL;
+	dict_item* p = CVEC_GET_VOID(d, dict_item, 0);
 
-	return (d);
+	// Make a var for $argc
+	p->value = (Var*)calloc(1, sizeof(Var));
+
+	// that cast isn't even necessary right?
+	// why don't we use newInt?  Why don't we want to mem_malloc it?
+	// (which is called in newInt -> newVal -> newVar)
+	make_sym(p->value, DV_INT32, (char*)"0");
+	V_TYPE(p->value) = ID_VAL;
 }
 
-/**
- ** Allocate an init space for a scope
- **/
-Scope* new_scope()
+
+void init_scope(Scope* s)
 {
-	Scope* s = (Scope*)calloc(1, sizeof(Scope));
+	//not sure if this is necessary
+	memset(s, 0, sizeof(Scope));
 
-	s->dd    = new_dd();
-	s->args  = new_dd();
-	s->stack = (Stack*)calloc(1, sizeof(Stack));
-	return (s);
+	// TODO(rswinkle): add elem_free later
+	//
+	// These actually aren't even necessary since cvec allocator macro handles
+	// 0 capacity correctly, but when/if we use elem_free it makes more sense
+	cvec_void(&s->symtab, 0, 8, sizeof(varptr), NULL, NULL);
+
+	cvec_void(&s->stack, 0, 2, sizeof(varptr), NULL, NULL);
+
+	init_dd(&s->dd);
+	init_dd(&s->args);
+
 }
 
+
+// NOTE(rswinkle): Only used 3 times, all in ufunc.c::dispatch_ufunc()
 void free_scope(Scope* s)
 {
 	/* this looks wrong
@@ -219,61 +250,60 @@ void free_scope(Scope* s)
 	   }
 	*/
 
-	if (s->dd->value) free(s->dd->value);
-	if (s->dd) free(s->dd);
-
-	free(s->args->value);
-	free(s->args);
-	free(s);
+	cvec_free_void(&s->dd);
+	cvec_free_void(&s->args);
 }
 
 void push(Scope* scope, Var* v)
 {
-	Stack* stack = scope->stack;
-	if (stack->top == stack->size) {
-		stack->size  = max(stack->size * 2, 2);
-		stack->value = (Var**)my_realloc(stack->value, stack->size * sizeof(Var*));
-	}
-	stack->value[stack->top++] = v;
+	varptr t = { v };
+
+	cvec_push_void(&scope->stack, &t);
 }
 
 Var* pop(Scope* scope)
 {
-	Stack* stack = scope->stack;
+	cvector_void* s = &scope->stack;
 
-	if (stack->top == 0) return (NULL);
-	return stack->value[--stack->top];
+	if (!s->size) return NULL;
+
+	varptr ret;
+	cvec_pop_void(s, &ret);
+
+	return ret.p;
 }
 
-void clean_table(Symtable* s)
+void clean_table(cvector_void* vec)
 {
-	Symtable* t;
-
-	while (s != NULL) {
-		t = s->next;
-		free_var(s->value);
-		free(s);
-		s = t;
+	for (int i=0; i<vec->size; ++i) {
+		free(*CVEC_GET_VOID(vec, Var*, i));
 	}
+	cvec_free_void(vec);
 }
 
 void clean_stack(Scope* scope)
 {
-	Stack* stack = scope->stack;
-	Var* v;
+	cvector_void* s = &scope->stack;
+	//Var* v;
+	// could use v if we wanted
+	// cvec_pop_void(s, &v) would work fine
+	// it's a void* parameter and the space is the
+	// same.  Really you could pass the address of anything
+	// as long as it had >= elem_size space.
+	//
+	// I only made varptr for if/when I move to cvec_varptr
 
-	while (stack->top) {
-		v = stack->value[--stack->top];
-		if (v == NULL) continue;
+	varptr r;
+	while (s->size) {
+		cvec_pop_void(s, &r);
+		if (!r.p) continue;
 
-		if (mem_claim(v) != NULL) free_var(v);
+		if (mem_claim(r.p)) free_var(r.p);
 	}
 }
 
-/**
- ** Clean the stack and tmptab of the current scope
- **/
-
+// only used 6 times, 1 in main.c, 5 in p.c
+// Clean the stack and tmptab of the current scope
 void cleanup(Scope* scope)
 {
 	clean_stack(scope);
@@ -281,9 +311,7 @@ void cleanup(Scope* scope)
 	scope->tmp = NULL;
 }
 
-/**
- ** allocate memory in the scope tmp list
- **/
+// allocate memory in the scope tmp list
 Var* mem_malloc()
 {
 	Scope* scope = scope_tos();
@@ -326,10 +354,8 @@ Var* mem_claim_struct(Var* v)
 	return (v);
 }
 
-/**
- ** claim memory in the scope tmp list, so it doesn't get free'd
- ** return NULL if it isn't here.
- **/
+// claim memory in the scope tmp list, so it doesn't get free'd
+// return NULL if it isn't here.
 Var* mem_claim(Var* ptr)
 {
 	Scope* scope = scope_tos();
@@ -352,10 +378,7 @@ Var* mem_claim(Var* ptr)
 	return (NULL);
 }
 
-/**
- ** free the scope tmp list
- **/
-
+// free the scope tmp list
 void mem_free(Scope* scope)
 {
 	if (scope->tmp) Darray_free(scope->tmp, (Darray_FuncPtr)free_var);
@@ -364,14 +387,15 @@ void mem_free(Scope* scope)
 void unload_symtab_modules(Scope* scope)
 {
 #ifdef BUILD_MODULE_SUPPORT
-	Symtable* s = scope->symtab;
-	while (s) {
-		Var* v = s->value;
-		s      = s->next;
+	cvector_void* vec = &scope->symtab;
+	Var* v;
+	for (int i=0; i<vec->size; ++i) {
+		v = *CVEC_GET_VOID(vec, Var*, i);
 		if (V_TYPE(v) == ID_MODULE) {
 			unload_dv_module(V_NAME(v));
 		}
 	}
+
 #endif /* BUILD_MODULE_SUPPORT */
 }
 
@@ -382,27 +406,21 @@ void unload_symtab_modules(Scope* scope)
  ** All the vars in args belong to the parent.  Dont free those.
  ** argv[0]
  **/
-
 void clean_scope(Scope* scope)
 {
 
-	if (scope->dd) {
-		free_var(scope->dd->value[0]);
-		free(scope->dd->value);
-		/* this looks wrong
-		   for (i = 1 ; i< scope->dd->count ; i++) {
-		   free(scope->dd->name[i]);
-		   }
-		*/
-		free(scope->dd->name);
-		free(scope->dd);
+	// NOTE(rswirkle): Need to think about whether these checks are necessary
+	// but for now just replicating old logic
+	if (scope->dd.a) {
+		free_var(CVEC_GET_VOID(&scope->dd, dict_item, 0)->value);
+		cvec_free_void(&scope->dd);
 	}
-	if (scope->args) {
-		free_var(scope->args->value[0]);
-		free(scope->args->value);
-		free(scope->args->name);
-		free(scope->args);
+
+	if (scope->args.a) {
+		free_var(CVEC_GET_VOID(&scope->args, dict_item, 0)->value);
+		cvec_free_void(&scope->args);
 	}
+
 	clean_stack(scope);
 	if (scope->tmp) Darray_free(scope->tmp, (Darray_FuncPtr)free_var);
 	scope->tmp = NULL;
@@ -414,11 +432,8 @@ void clean_scope(Scope* scope)
 	   to the module variable in the global symbol table. */
 	unload_symtab_modules(scope);
 
-	clean_table(scope->symtab);
-	scope->symtab = NULL;
+	// replace with cvec_free with elem_free
+	clean_table(&scope->symtab);
 
-	free(scope->stack->value);
-	free(scope->stack);
-
-	free(scope);
+	cvec_free_void(&scope->stack);
 }

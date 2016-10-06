@@ -9,19 +9,13 @@ test_suites = [
 "basic/",
 "io/",
 "matrix/",
-"modules/",
+#"modules/",
 "pca/",
 "plot/",
 "sort",
 "cmd_line"
 ]
 
-
-# TODO think about those 4 tests
-# output-1,2,3 and cmd-line-args
-test_strings = [
-" -qe 'printf(\"%d_%.2f\", 4*3, 4.0/3)'",
-]
 
 
 
@@ -100,6 +94,7 @@ def main():
 			filename = tmpfile.name
 
 		proc = Popen([args.davinci, "-fqv0", filename], stdout=PIPE, universal_newlines=True)
+		#proc = Popen(["valgrind", "--leak-check=full", "-v", args.davinci, "-fqv0", filename], stdout=PIPE, universal_newlines=True)
 
 		out, err = proc.communicate()
 		rc = proc.returncode
