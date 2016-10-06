@@ -40,6 +40,17 @@ XtAppContext applicationContext;
 static int windows = 1;
 int usage(char* prog);
 
+// Used for tab completion
+extern int num_internal_funcs;
+extern struct _vfuncptr vfunclist[];
+
+extern UFUNC** ufunc_list;
+extern int nufunc;
+
+////////////////////
+
+
+
 
 /**
  ** Command line args:
@@ -64,9 +75,11 @@ void event_loop(void);
 
 #ifdef HAVE_LIBREADLINE
 #include <readline/readline.h>
-#endif
 
 char** dv_complete_func(const char* text, int start, int end);
+char** dv_null_func(const char* text, int start, int end) { return NULL; }
+
+#endif
 
 jmp_buf env;
 
@@ -104,7 +117,7 @@ void dv_sighandler(int data)
 		signal(SIGINT, SIG_IGN);
 		while ((scope = scope_tos()) != global_scope()) {
 			dd_unput_argv(scope);
-			clean_scope(scope_pop());
+			scope_pop();
 		}
 
 		signal(SIGINT, dv_sighandler);
@@ -115,9 +128,11 @@ void dv_sighandler(int data)
 
 /* char *__progname = "davinci"; */
 
+
+
+
 int main(int ac, char** av)
 {
-	Scope* s;
 	Var* v;
 	FILE* fp;
 	char path[256];
@@ -127,6 +142,7 @@ int main(int ac, char** av)
 	int iflag     = 0;
 	char* p;
 	int history = 1;
+
 #if defined(__APPLE__)
 	int ret;
 	char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
@@ -147,8 +163,24 @@ int main(int ac, char** av)
 	pid_t pid;
 #endif
 
-	s = new_scope();
+
+
+
+	// TODO(rswinkle): put all this in a general "init" function
 	init_input_stack();
+	init_scope_stack();
+
+	Scope scope;
+	init_scope(&scope);
+	scope_push(&scope);
+	Scope* s = scope_stack_back();
+
+	//sort internal function list to speed up tab completion matching
+	//and present them in alphabetical order when double TABing for multiple matches
+	qsort(vfunclist, num_internal_funcs, sizeof(struct _vfuncptr), cmp_string);
+
+
+
 
 	signal(SIGINT, dv_sighandler);
 	signal(SIGSEGV, dv_sighandler);
@@ -157,7 +189,7 @@ int main(int ac, char** av)
 	signal(SIGBUS, dv_sighandler);
 	signal(SIGUSR1, user_sighandler);
 #endif
-	scope_push(s);
+
 	/**
 	 ** handle $0 specially.
 	 **/
@@ -321,7 +353,22 @@ int main(int ac, char** av)
 		if (quick == 0 || history == 1) init_history(logfile);
 #ifdef HAVE_LIBREADLINE
 		/* JAS FIX */
+
+		// TODO(rswinkle): figure out how to get special_prefixes to work and
+		// whether it's even worth it
+		// There are too many configuration variables poorly documented/explained
+		// http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#SEC47
+		//static const char* wordbreakers = ".";
+		//rl_special_prefixes = wordbreakers;
+		
+
+		//static const char wordbreakers = " \t\n\"\\'`@$><=;|&{(";
+		//adding the '.'
+		static const char* wordbreakers = ". \t\n\"\\'`@$><=;|&{(";
+		rl_basic_word_break_characters = wordbreakers;
+
 		rl_attempted_completion_function = dv_complete_func;
+		//rl_attempted_completion_function = dv_null_func;
 #endif
 	}
 	if (quick == 0) {
@@ -569,6 +616,9 @@ void parse_buffer(char* buf)
 
 	curnode = NULL;
 
+	// DEBUG(rswinkle)
+	//printf("start scope_count = %d\n", scope_stack_count());
+
 	while ((i = yylex()) != 0) {
 		/*
 		** if this is a function definition, do no further parsing yet.
@@ -579,7 +629,9 @@ void parse_buffer(char* buf)
 		if (j == 1 && curnode != NULL) {
 			node = curnode;
 			evaluate(node);
+
 			v = pop(scope_tos());
+
 			pp_print(v);
 			free_tree(node);
 			indent = 0;
@@ -637,6 +689,8 @@ void fake_data()
 #endif
 	}
 
+	// Set VZERO, read only variable used twice in pp_math.c when
+	// variables are NULL they're set to this.
 	v            = (Var*)calloc(1, sizeof(Var));
 	V_NAME(v)    = NULL;
 	V_TYPE(v)    = ID_VAL;
@@ -646,8 +700,9 @@ void fake_data()
 	V_SIZE(v)[2] = 1;
 	V_ORG(v)     = BSQ;
 	V_FORMAT(v)  = DV_UINT8;
-	V_DATA(v)    = calloc(1, sizeof(u_char));
+	V_DATA(v)    = calloc(1, sizeof(u8));
 	VZERO        = v;
+
 
 	v         = newVar();
 	V_NAME(v) = strdup("tmp");
@@ -736,9 +791,237 @@ void init_history(char* fname)
 	}
 }
 
-char** dv_complete_func(const char* text, int start, int end) { return (NULL); }
 
-#ifndef HAVE_LIBREADLINE
+
+
+#ifdef HAVE_LIBREADLINE
+
+// Generator function for command completion.  STATE lets us know whether
+// to start from scratch; without any state (i.e. STATE == 0), then we
+// start at the top of the list.
+char* command_generator(const char* text, int state)
+{
+	static int list_index, len, search_state;
+
+	Scope* scope = global_scope();
+
+	cvector_void* vec = &scope->symtab;
+	Var* v;
+
+	// If this is a new word to complete, initialize now.  This includes
+	// saving the length of TEXT for efficiency, and initializing the index
+	// variable to 0.
+	if (!state) {
+		len = strlen(text);
+		search_state = 0;
+		list_index = 0;
+	}
+
+	int i;
+
+	// Return the next name which partially matches from the command list.
+	
+	// search builtin functions
+	if (search_state == 0) {
+		for (i=list_index; i<num_internal_funcs; ++i) {
+			if (strncmp(vfunclist[i].name, text, len) == 0) {
+				list_index = i+1;
+				return strdup(vfunclist[i].name);
+			}
+		}
+		search_state++;
+		list_index = 0;
+	}
+
+	//search user defined functions
+	if (search_state == 1) {
+		for (i = list_index; i < nufunc; ++i) {
+			if (strncmp(ufunc_list[i]->name, text, len) == 0) {
+				list_index = i+1;
+				return strdup(ufunc_list[i]->name);
+			}
+		}
+		search_state++;
+		list_index = 0;
+	}
+
+	//global variables
+	if (search_state == 2) {
+		for (i=0; i<vec->size; ++i) {
+			if (i < list_index)
+				continue;
+
+			v = *CVEC_GET_VOID(vec, Var*, i);
+			if (V_NAME(v) != NULL && !strncmp(V_NAME(v), text, len)) {
+				list_index = i+1;
+				return strdup(V_NAME(v));
+			}
+		}
+	}
+
+	// If no names matched, then return NULL.
+	return NULL;
+}
+
+char* member_generator(const char* text, int state)
+{
+	static int list_index, len;
+	static Var* v;
+	static char* dot;
+
+	Var* member;
+	char* name;
+
+	Scope* scope = global_scope();
+	cvector_void* vec = &scope->symtab;
+
+	char* word = NULL;
+
+	//text is actually empty cause it breaks on '.' and we
+	//need the structure names so we work on the whole line buf
+	//word = text;
+	word = rl_line_buffer;
+
+	//return NULL;
+	//printf("word = \"%s\"\n", word);
+	char* tmp;
+	int nlen;
+	int i, n_memb;
+
+	if (!state) {
+		len = strlen(word);
+		list_index = 0;
+		v = NULL;
+		dot = word;
+	}
+	char buf[256];
+
+	if (!v) {
+		tmp = strchr(word, '.');
+		nlen = tmp - dot;
+		dot = tmp;
+
+		for (i=0; i<vec->size; ++i) {
+			v = *CVEC_GET_VOID(vec, Var*, i);
+			if (V_TYPE(v) != ID_STRUCT)
+				continue;
+
+			if (V_NAME(v) && !strncmp(V_NAME(v), word, nlen)) {
+				break;
+			}
+		}
+
+		if (i == vec->size)
+			return NULL;
+
+		while ((tmp = strchr(&dot[1], '.'))) {
+			memcpy(buf, &dot[1], tmp-dot-1);
+			buf[tmp-dot-1] = 0;
+			i = Narray_find(V_STRUCT(v), buf, (void**)&member);
+			if (i == -1 || V_TYPE(member) != ID_STRUCT)
+				return NULL;
+			
+			v = member;
+			dot = tmp;
+		}
+	}
+
+	nlen = len - (dot - word) - 1;
+	char* result = NULL;
+	n_memb = get_struct_count(v);
+	for (int j=list_index; j<n_memb; ++j) {
+		get_struct_element(v, j, &name, &member);
+		if (name && !strncmp(name, &dot[1], nlen)) {
+
+			list_index = j+1;
+			/*
+			result = malloc(dot-word+1 + strlen(name)+1);
+			memcpy(result, word, dot-word+1);
+			strcpy(&result[dot-word+1], name);
+			return result;
+			*/
+
+			return strdup(name);
+		}
+	}
+
+	return NULL;
+}
+
+char* global_var_generator(const char* text, int state)
+{
+	static int list_index, len;
+
+	Scope* scope = global_scope();
+	cvector_void* vec = &scope->symtab;
+	Var* v;
+
+	if (!state) {
+		len = strlen(text);
+		list_index = 0;
+	}
+
+	int i;
+	for (i=0; i<vec->size; ++i) {
+		if (i < list_index)
+			continue;
+
+		v = *CVEC_GET_VOID(vec, Var*, i);
+		if (V_NAME(v) != NULL && !strncmp(V_NAME(v), text, len)) {
+			list_index = i+1;
+			return strdup(V_NAME(v));
+		}
+	}
+	return NULL;
+}
+
+
+
+
+/* Attempt to complete on the contents of TEXT.  START and END bound the
+	 region of rl_line_buffer that contains the word to complete.  TEXT is
+	 the word to complete.  We can use the entire contents of rl_line_buffer
+	 in case we want to do some simple parsing.  Return the array of matches,
+	 or NULL if there aren't any. */
+char** dv_complete_func(const char* text, int start, int end)
+{
+	char** matches = NULL;
+
+	rl_completion_append_character = '\0';
+
+	//static const char *default_filename_quote_chars = " \t\n\\\"'@<>=;|&()#$`?*[!:{~";	/*}*/
+	//rl_filename_quote_characters = default_filename_quote_chars;
+
+	static const char* qb = "\'\"";
+	//rl_completer_word_break_characters = wordbreakers;
+
+
+	// If this word is at the start of the line, then it is a function name
+	// to complete.  Otherwise it is the name of a file in the current
+	// directory.
+	//printf("\"%s\" %d %d %c\n", rl_line_buffer, start, end, rl_line_buffer[start]);
+	if (start == 0) {
+		matches = rl_completion_matches(text, command_generator);
+	} else {
+		if (rl_line_buffer[start-1] == '.') {
+			matches = rl_completion_matches(text, member_generator);
+			rl_attempted_completion_over = 1;
+
+		// I'm sure there is a better/more correct way to do this but I haven't
+		// figured it out yet
+		} else if (rl_line_buffer[start-1] != qb[0] && rl_line_buffer[start-1] != qb[1]) {
+		//} else if (!rl_completion_quote_character) {
+			matches = rl_completion_matches(text, command_generator);
+		} else {
+			//rl_completer_word_break_characters = qb;
+		}
+	}
+
+
+	return matches;
+}
+
+#else
 
 void add_history() {}
 char* readline(char* prompt)

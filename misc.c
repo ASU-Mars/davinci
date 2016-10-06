@@ -141,19 +141,33 @@ char* get_value(char* s1, char* s2)
 }
 
 
-// Moved from global.c
+// Moved from globals.c
 void make_sym(Var* v, int format, char* str)
 {
+	double d;
+
 	V_FORMAT(v)  = format;
 	V_DSIZE(v)   = 1;
 	V_SIZE(v)[0] = V_SIZE(v)[1] = V_SIZE(v)[2] = 1;
 	V_ORG(v)                                   = BSQ;
 	V_DATA(v)                                  = calloc(1, NBYTES(format));
 
+	// TODO(rswinkle) I think we should just default to i64 and double
+	// TODO FIX, though it's very unlikely I think this could write out of bounds
+	// if you allocated enough space for a smaller format, and then write as if its
+	// a larger format ...
 	switch (format) {
-	case DV_INT32: *((int*)(V_DATA(v))) = strtol(str, NULL, 10); break;
-	case DV_FLOAT: {
-		double d;
+	case DV_UINT8:
+	case DV_UINT16:
+	case DV_UINT32:
+	case DV_UINT64: *((u64*)(V_DATA(v))) = strtoull(str, NULL, 10); break;
+
+	case DV_INT8:
+	case DV_INT16:
+	case DV_INT32: *((i32*)(V_DATA(v))) = strtol(str, NULL, 10); break;
+	case DV_INT64: *((i64*)(V_DATA(v))) = strtoll(str, NULL, 10); break;
+
+	case DV_FLOAT:
 		d = strtod(str, NULL);
 		if (((d > FLT_MAX) || (d < FLT_MIN)) && (d != 0)) {
 			free(V_DATA(v));
@@ -163,7 +177,11 @@ void make_sym(Var* v, int format, char* str)
 		} else {
 			*((float*)(V_DATA(v))) = d;
 		}
-	}
+		break;
+	case DV_DOUBLE:
+		d = strtod(str, NULL);
+		*((double*)(V_DATA(v))) = d;
+		break;
 	}
 }
 
@@ -179,11 +197,12 @@ void quit(int return_code)
 #endif
 	}
 
-	clean_scope(scope_tos());
+	// Could free memory here (like scope_stack etc.) but
+	// what's the point?
+	// It's only a memory leak if forget to free something
+	// while running or worse lose access to the pointer entirely.
 
-	/**
-	 ** clean up temporary directory
-	 **/
+	// clean up temporary directory
 	rmrf(path);
 	exit(return_code);
 }
@@ -443,21 +462,64 @@ int parse_args(vfuncptr name, Var* args, Alist* alist)
 			vptr            = (Var**)(alist[j].value);
 			*vptr           = v;
 			alist[j].filled = 1;
-		} else if (alist[j].type == DV_INT32) {
-			int* iptr;
+
+
+		// NOTE(rswinkle) this works because the integer types are grouped together
+		// *and* the davinci type enum doesn't overlap,
+		//
+		// ID_NONE  = 0, /* a non value */
+		// ID_ERROR = 99,
+		// ID_BASE  = 100, /* in case of conflicts */
+		// ID_UNK,         /* Unknown type - also used as a generic type */
+		// ...
+		// etc.
+		// though of course we could just shift the starting point to of the numeric
+		// enums if we needed to
+		} else if (alist[j].type >= DV_UINT8 && alist[j].type <= DV_INT64) {
+
+			// NOTE(rswinkle) previously it only did i32 and all non-real/OBJ args were i32
+			// (including those specified as BOOL/BOOLEAN in docs) because it was the largest
+			// int type available it could handle anything
+			//
+			// I am going to handle everything even though it's overkill because I might as well.  Really
+			// You could probably just add i64 (and maybe u32 and u64)
+			// I'm not going to change every davinci function to use DV_INT64's instead though someone might
+			// want to eventually.
+			u8* u8ptr = alist[j].value;
+			u16* u16ptr = alist[j].value;
+			u32* u32ptr = alist[j].value;
+			u64* u64ptr = alist[j].value;
+
+			i8* i8ptr = alist[j].value;
+			i16* i16ptr = alist[j].value;
+			i32* i32ptr = alist[j].value;
+			i64* i64ptr = alist[j].value;
+
 			if ((e = eval(v)) == NULL) {
 				parse_error("%s: Variable not found: %s", fname, V_NAME(v));
 				free(av);
 				return 0;
 			}
 			v = e;
-			if (V_TYPE(v) != ID_VAL || V_FORMAT(v) > DV_INT32) {
-				parse_error("Illegal argument %s(...%s=...), expected DV_INT32", fname, alist[j].name);
+			if (V_TYPE(v) != ID_VAL || V_FORMAT(v) > DV_INT64) {
+				parse_error("Illegal argument %s(...%s=...), expected integer type", fname, alist[j].name);
 				free(av);
 				return 0;
 			}
-			iptr            = (int*)(alist[j].value);
-			*iptr           = extract_int(v, 0);
+
+			// TODO(rswinkle) use extract_int and arch based macros? see parser.h
+			switch (alist[j].type) {
+			case DV_UINT8: *u8ptr = extract_u64(v, 0); break;
+			case DV_UINT16: *u16ptr = extract_u64(v, 0); break;
+			case DV_UINT32: *u32ptr = extract_u64(v, 0); break;
+			case DV_UINT64: *u64ptr = extract_u64(v, 0); break;
+
+			case DV_INT8: *i8ptr = extract_i64(v, 0); break;
+			case DV_INT16: *i16ptr = extract_i64(v, 0); break;
+			case DV_INT32: *i32ptr = extract_i64(v, 0); break;
+			case DV_INT64: *i64ptr = extract_i64(v, 0); break;
+			}
+			
 			alist[j].filled = 1;
 		} else if (alist[j].type == DV_FLOAT) {
 			float* fptr;
@@ -512,6 +574,7 @@ int parse_args(vfuncptr name, Var* args, Alist* alist)
 				for (p = values; p && *p; p++) {
 					if (ptr && !strcasecmp(ptr, *p)) {
 						q = *p;
+						break;
 					}
 				}
 				if (q == NULL) {
@@ -521,6 +584,7 @@ int parse_args(vfuncptr name, Var* args, Alist* alist)
 							for (p = values; p && *p; p++) {
 								if (ptr && !strcasecmp(ptr, *p)) {
 									q = *p;
+									break;
 								}
 							}
 						}
@@ -679,6 +743,10 @@ int dv_format_size(int type)
 	case DV_FLOAT:
 		return 4;
 
+	case DV_UINT64:
+	case DV_INT64:
+		return 8;
+
 	case DV_DOUBLE:
 		return sizeof(double);
 	default:
@@ -692,31 +760,18 @@ int dv_format_size(int type)
 const char* dv_format_to_str(int type)
 {
 	switch (type) {
-	case DV_UINT8:
-		return "byte";
+	case DV_UINT8:  return "uint8";
+	case DV_UINT16: return "uint16";
+	case DV_UINT32: return "uint32";
+	case DV_UINT64: return "uint64";
 
-	case DV_UINT16:
-		return "uint16";
+	case DV_INT8:  return "int8";
+	case DV_INT16: return "int16";
+	case DV_INT32: return "int32";
+	case DV_INT64: return "int64";
 
-	case DV_UINT32:
-		return "uint32";
-
-	case DV_UINT64:
-		return "uint64";
-
-	case DV_INT8:
-		return "int8";
-	case DV_INT16:
-		return "short"; //int16
-	case DV_INT32:
-		return "int"; //int32
-	case DV_INT64:
-		return "int64";
-
-	case DV_FLOAT:
-		return "float";
-	case DV_DOUBLE:
-		return "double";
+	case DV_FLOAT:  return "float";
+	case DV_DOUBLE: return "double";
 
 /* deprecated
 	case VAX_FLOAT:
@@ -724,10 +779,12 @@ const char* dv_format_to_str(int type)
 	case VAX_INTEGER:
 		return "vax_int"
 */
+	default:
+		parse_error("Unknown format");
+		return NULL;
 	}
 }
 
-// TODO(rswinkle) create array mapping FORMAT_STRINGS to appropriate formats
 int dv_str_to_format(const char* str)
 {
 	int format = -1;
@@ -739,3 +796,6 @@ int dv_str_to_format(const char* str)
 
 	return format;
 }
+
+
+

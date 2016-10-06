@@ -7,23 +7,39 @@
 //for size_t
 #include <stdlib.h>
 
+#include <stdint.h>
+
 typedef struct _var Var;
 typedef Var* Vptr;
 /* dvModule is defined in ff_modules.h */
 typedef struct _vfuncptr* vfuncptr;
 typedef Var* (*vfunc)(struct _vfuncptr*, Var*); /* function caller */
 
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
+
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+
+
+
 typedef struct Range {
 	int dim; /* dimension of data */
-	int lo[3];
-	int hi[3];
-	int step[3];
+	
+	// TODO(rswinkle) make size_t?
+	u64 lo[3];
+	u64 hi[3];
+	u64 step[3];
 } Range;
 
 typedef struct Sym {
 	int format;   /* format of data */
 	size_t dsize; /* total size of data */
-	int size[3];  /* size of each axis */
+	size_t size[3];  /* size of each axis */
 	int order;    /* axis application order */
 	void* data;
 	void* null; /* null value */
@@ -41,12 +57,6 @@ typedef struct Node {
 
 	int token_number; /* Where in the value table is this puppy located? */
 } Node;
-
-typedef struct Vstruct {
-	int x_count;
-	char** x_names;
-	Var** x_data;
-} Vstruct;
 
 typedef struct TextArray {
 	int Row;
@@ -100,10 +110,28 @@ typedef struct Alist {
 #define V_SYM(v) (&((v)->value.sym)) /* SYMbol value in union */
 
 #define V_DATA(v) V_SYM(v)->data      /* pointer to data */
-#define V_INT(v) (*((int*)V_DATA(v))) /* derefernce as a single int */
-/* #define V_INT64(v)  (*((int64 *)V_DATA(v))) / * derefernce as a single int64 */
+
+// dereference as single elements of a type
+#define V_UINT8(v) (*((u8*)V_DATA(v)))
+#define V_UINT16(v) (*((u16*)V_DATA(v)))
+#define V_UINT32(v) (*((u32*)V_DATA(v)))
+#define V_UINT64(v) (*((u64*)V_DATA(v)))
+
+#define V_INT8(v) (*((i8*)V_DATA(v)))
+#define V_INT16(v) (*((i16*)V_DATA(v)))
+#define V_INT32(v) (*((i32*)V_DATA(v)))
+#define V_INT64(v) (*((i64*)V_DATA(v)))
+
+// historical type names
+// TODO(rswinkle) change V_INT based on arch?  uncomment V_INT64?
+#define V_BYTE(v) (*((u8*)V_DATA(v)))
+#define V_SHORT(v) (*((i16*)V_DATA(v)))
+#define V_INT(v) (*((i32*)V_DATA(v)))
+
 #define V_FLOAT(v) (*((float*)V_DATA(v)))   /* derefernce as a single float */
 #define V_DOUBLE(v) (*((double*)V_DATA(v))) /* derefernce as a single dbl */
+
+
 #define V_FORMAT(v) V_SYM(v)->format
 #define V_DSIZE(v) V_SYM(v)->dsize
 #define V_SIZE(v) V_SYM(v)->size
@@ -149,7 +177,7 @@ enum {
 	ID_RANGES, /* list of ranges */
 	ID_RSTEP,  /* list of ranges */
 	ID_RANGE,  /* single range value */
-	ID_SET,    /* equivalence expression */
+	ID_SET,    /* assignment expression */
 	ID_OR,     /* logical (||) or */
 	ID_AND,    /* logical (&&) and */
 	ID_EQ,     /* logical (==) equals */
@@ -206,8 +234,15 @@ enum {
 	ID_FPTR /* a function pointer */
 };
 
-// TODO(rswinkle) make these an enum?
 
+// NOTE(rswinkle): Always keep the order and arrangement of the types like this
+// so things like
+//
+// if(format >= DV_UINT8 && format <= DV_INT64)
+// else if (format <= DV_DOUBLE)
+//
+// and similar checks work
+//
 enum {
 	DV_UINT8 = 1,
 	DV_UINT16,
@@ -259,12 +294,27 @@ const char* dv_format_to_str(int type);
 #define GetZ(s) GetBands(V_SIZE(s), V_ORG(s))
 #define GetNbytes(s) NBYTES(V_FORMAT(s))
 
-#define saturate(v, lo, hi) ((v) > (lo) ? ((v) < (hi) ? (v) : (hi)) : (lo))
-#define saturate_byte(v) saturate(v, 0, 255)
-#define saturate_short(v) saturate(v, (SHRT_MIN), (SHRT_MAX))
-#define saturate_int(v) saturate(v, (INT_MIN), (INT_MAX))
-#define saturate_float(v) v
-#define saturate_double(v) v
+#define clamp(v, lo, hi) ((v) > (lo) ? ((v) < (hi) ? (v) : (hi)) : (lo))
+
+#define clamp_u8(v) clamp(v, 0, UINT8_MAX)
+#define clamp_byte(v) clamp_u8(v)
+
+#define clamp_u16(v) clamp(v, 0, UINT16_MAX)
+#define clamp_u32(v) clamp(v, 0, UINT32_MAX)
+#define clamp_u64(v) clamp(v, 0, UINT64_MAX)
+
+#define clamp_i8(v) clamp(v, INT8_MIN, INT8_MAX)
+
+#define clamp_i16(v) clamp(v, (INT16_MIN), (INT16_MAX))
+#define clamp_short(v) clamp_i16(v)
+
+#define clamp_i32(v) clamp(v, (INT32_MIN), (INT32_MAX))
+#define clamp_int(v) clamp_i32(v)
+
+#define clamp_i64(v) clamp(v, (INT64_MIN), (INT64_MAX))
+
+#define clamp_float(v) v
+#define clamp_double(v) v
 
 
 #endif
