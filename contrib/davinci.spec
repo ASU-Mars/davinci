@@ -32,8 +32,8 @@ Packager:     Davinci Devs <davinci-dev@mars.asu.edu>
 Distribution: CentOS 6 (MSFF)
 Group:        Applications/Science
 License:      GPLv2
-Version:	2.17
-Release:      3
+Version:      2.18
+Release:      1
 
 # This was generated using the following process:
 # svn checkout http://oss.mars.asu.edu/svn/davinci/davinci/tags/dv_2_17/ davinci-2.17
