@@ -338,3 +338,173 @@ fremove("test64bit_packed.dat")
 pack(a, "U1U4U8U8U8U8u1u4u8u8u8u8II4I8I8I8I8ii4i8i8i8i8", "test64bit_packed.dat")
 b = unpack("U1U4U8U8U8U8u1u4u8u8u8u8II4I8I8I8I8ii4i8i8i8i8", "test64bit_packed.dat")
 equals(a,b)
+###################################################
+# User: rswinkle    Date:  Tue Oct 18 18:29:48 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+atm = load("atm.hdf")
+pack(atm, "U4U2U2*38U2U2R4I2*9R4R4R4a4", "atm_packed.dat")
+atm_in = unpack("U4U2U2*38U2U2R4I2*9R4R4R4a4", "atm_packed.dat")
+if (equals(atm, atm_in) == 0) exit(1);
+###################################################
+# User: rswinkle    Date:  Tue Oct 18 18:30:23 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+pack(atm, "U4U2U2*38U2U2R4I2*9R4R4R4a4", "atm_packed.dat")
+atm_in = unpack("U4U2U2*38U2U2R4I2*9R4R4R4a4", "atm_packed.dat")
+if (equals(atm, atm_in) == 0) exit(1);
+###################################################
+# User: rswinkle    Date:  Tue Oct 18 18:30:50 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+atm = load("atm.hdf")
+pack(atm, "U4U2U2*38U2U2R4I2*9R4R4R4a4", "atm_packed.dat")
+pack(atm, "U4U2U2*38U2U2R4I2*9R4R4R4a4", "atm_packed.dat", force=1)
+atm_in = unpack("U4U2U2*38U2U2R4I2*9R4R4R4a4", "atm_packed.dat")
+equals(atm, atm_in)
+equals(atm.c1, atm_in.c1)
+equals(atm.c2, atm_in.c2)
+atm.c2[1,1:10]
+atm_in.c2[1,1:10]
+atm_in.c2[1,1:20]
+!ls
+unpack("U4U2U2*38U2U2R4I2*9R4R4R4x6a4", "atm05555.dat", 390)
+c = unpack("U4U2U2*38U2U2R4I2*9R4R4R4x6a4", "atm05555.dat", 390)
+c2[,1:20]
+c.c2[,1:20]
+write(c, "atm_test.hdf", hdf)
+hdf_in = load("atm_test.hdf")
+atm
+###################################################
+# User: rswinkle    Date:  Mon Oct 24 16:25:58 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+atm = load("atm.hdf")
+pack(atm, "atm_packed.dat")
+fremove("atm_packed.dat")
+pack(atm, "atm_packed.dat")
+###################################################
+# User: rswinkle    Date:  Mon Oct 24 16:39:37 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+atm = load("atm.hdf")
+pack(atm, "atm_packed.dat")
+fremove("atm_packed.dat")
+pack(atm, "atm_packed.dat")
+###################################################
+# User: rswinkle    Date:  Mon Oct 24 16:42:54 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+fremove("atm_packed.dat")
+fremove("atm_packed.dat")
+atm = load("atm.hdf")
+pack(atm, "atm_packed.dat")
+###################################################
+# User: rswinkle    Date:  Mon Oct 24 16:43:45 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+atm = load("atm.hdf")
+str = pack(atm, "atm_packed.dat")
+fremove("atm_packed.dat")
+str = pack(atm, "atm_packed.dat")
+###################################################
+# User: rswinkle    Date:  Mon Oct 24 16:51:30 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+fremove("atm_packed.dat")
+atm = load("atm.hdf")
+str = pack(atm, "atm_packed.dat")
+atm_in = unpack(str, "atm_packed.dat")
+equals(atm, atm_in)
+atm.c10
+atm.c10[,1:10,]
+atm_in.c10[,1:10,]
+a = "test" //" blah"
+text
+text()
+text(?)
+text(2)
+text("test"))
+text("test")
+a
+a = text(4)
+a[1] = "hello"
+a[2] = "hello"
+a[3] = "goodbye"
+a[4] = "testing
+a[4] = "testing"
+a
+a[,1] = "hello"
+a[,2] = "hello"
+a[,3] = "goodbye"
+a[,4] = "testing"
+a
+a[1]
+a[,3]
+a[,,]
+a[,,3]
+a[,,100]
+a[,,-1]
+###################################################
+# User: rswinkle    Date:  Mon Oct 24 17:33:25 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+atm = load("atm.hdf")
+fremove("atm_packed.dat")
+str = pack(atm, "atm_packed.dat")
+###################################################
+# User: rswinkle    Date:  Mon Oct 24 17:37:57 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+fremove("atm_packed.dat")
+atm = load("atm.hdf")
+str = pack(atm, "atm_packed.dat")
+atm_in = unpack(str, "atm_packed.dat")
+equals(atm, atm_in)
+atm_in.c10
+atm_in.c10[,1:10,]
+atm.c8[,1:10,]
+###################################################
+# User: rswinkle    Date:  Mon Oct 24 18:42:49 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+atm = unpack("U4U2U2*38U2U2R4I2*9R4R4R4x6a4", "atm05555.dat", 390)
+write(atm, "atm_out.hdf", type=hdf, force=1)
+atm_in = load("atm_out.hdf")
+###################################################
+# User: rswinkle    Date:  Mon Oct 24 18:57:24 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+atm = unpack("U4U2U2*38U2U2R4I2*9R4R4R4x6a4", "atm05555.dat", 390)
+write(atm, "atm_out.hdf", type=hdf, force=1)
+atm_in = load("atm_out.hdf")
+###################################################
+# User: rswinkle    Date:  Mon Oct 24 19:15:35 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+atm = unpack("U4U2U2*38U2U2R4I2*9R4R4R4x6a4", "atm05555.dat", 390)
+write(atm, "atm_out.hdf", type=hdf, force=1)
+atm_in = load("atm_out.hdf")
+equals(atm, atm_in)
+old_atm = load("old_atm.hdf")
+equals(atm, old_atm)
+str = pack(atm, "atm_packed.dat")
+fremove("atm_packed.dat")
+str = pack(atm, "atm_packed.dat")
+atm_round = unpack(str, "atm_packed.dat")
+equals(atm, atm_round)
+write(atm, "atm.hdf")
+write(atm, "atm.hdf", hdf)
+obs = unpack("U4U2U2U4UU2UaaaaaaaUUx8U2*4U", "obs05555.dat", 420)
+write(obs, "obs.hdf", hdf)
+obs
+get_struct_key(obs)
+get_struct_key(obs, 0)
+get_struct_key(atm)
+atm
+###################################################
+# User: rswinkle    Date:  Mon Oct 24 19:45:37 2016
+# Host: <UNKNOWN>   Cwd: /mars/u/rswinkle/workspace/davinci_github/dv_tests/io/unpack
+###################################################
+atm = load("atm.hdf")
+get_struct_key(atm)

@@ -10,16 +10,19 @@
  **
  **/
 
-Var* HasValue(vfuncptr func, Var* arg)
+
+Var* ff_hasvalue(vfuncptr func, Var* arg)
 {
 	int ac;
 	Var **av, *v;
 
 	make_args(&ac, &av, func, arg);
+	int ret = 0;
 	if (ac == 2 && (v = eval(av[1])) != NULL) {
-		return newInt(1);
+		ret = 1;
 	}
-	return newInt(0);
+	free(av);
+	return newInt(ret);
 }
 
 // remove a symbol from the symtab.
@@ -27,15 +30,14 @@ Var* HasValue(vfuncptr func, Var* arg)
 Var* rm_symtab(Var* v)
 {
 	Scope* scope = scope_tos();
-
 	
-	cvector_void* vec = &scope->symtab;
-	varptr* ptr;
+	cvector_varptr* vec = &scope->symtab;
+	Var* ptr;
 
 	for (int i=0; i<vec->size; ++i) {
-		ptr = CVEC_GET_VOID(vec, varptr, i);
-		if (ptr->p == v) {
-			cvec_erase_void(vec, i, i);
+		ptr = vec->a[i];
+		if (ptr == v) {
+			cvec_erase_varptr(vec, i, i);
 			return v;
 		}
 	}
@@ -43,6 +45,14 @@ Var* rm_symtab(Var* v)
 	return NULL;
 }
 
+// NOTE(rswinkle): This seems extremely dangerous ...
+// I could understand making this take a string and calling
+// rm_sym() as a way to let users remove a symbol and free
+// the memory associated with it (as opposed to just overwriting
+// it with an int or something where the symbol still exists but
+// at least the memory is freed) but this
+// could be freeing a variable in symtab or tmp or who knows
+// potentially and that sounds like a recipe for "bad things" (TM)
 Var* ff_delete(vfuncptr func, Var* arg)
 {
 	Var* obj;
@@ -60,15 +70,15 @@ Var* ff_delete(vfuncptr func, Var* arg)
 
 Var* search_symtab(Scope* scope, char* name)
 {
-	cvector_void* vec = &scope->symtab;
+	cvector_varptr* vec = &scope->symtab;
 
-	// could just use a Var** and cast
-	varptr* ptr;
+	Var* v;
 
 	for (int i=0; i<vec->size; ++i) {
-		ptr = CVEC_GET_VOID(vec, varptr, i);
-		if (V_NAME(ptr->p) && !strcmp(V_NAME(ptr->p), name))
-			return ptr->p;
+		v = vec->a[i];
+		if (V_NAME(v) && !strcmp(V_NAME(v), name)) {
+			return v;
+		}
 	}
 
 	return NULL;
@@ -99,14 +109,14 @@ void rm_sym(char* name)
 {
 	Scope* scope = scope_tos();
 
-	cvector_void* vec = &scope->symtab;
-	varptr* ptr;
+	cvector_varptr* vec = &scope->symtab;
+	Var* v;
 
 	for (int i=0; i<vec->size; ++i) {
-		ptr = CVEC_GET_VOID(vec, varptr, i);
-		if (!strcmp(V_NAME(ptr->p), name)) {
-			free(ptr->p);
-			cvec_erase_void(vec, i, i);
+		v = vec->a[i];
+		if (!strcmp(V_NAME(v), name)) {
+			free_var(v);
+			cvec_erase_varptr(vec, i, i);
 			return;
 		}
 	}
@@ -131,6 +141,10 @@ Var* sym_put(Scope* scope, Var* s)
 		*s  = tmp;
 
 		// put the names back
+		//
+		// TODO(rswinkle) I really don't get this but
+		// somehow commenting these out breaks the test
+		// basic/ufunc/call-by-ref.dvtest
 		tmp.name = v->name;
 		v->name  = s->name;
 		s->name  = tmp.name;
@@ -138,17 +152,10 @@ Var* sym_put(Scope* scope, Var* s)
 		free_var(s);
 		s = v;
 	} else {
-		varptr sym;
-		sym.p = s;
-
-		cvec_push_void(&scope->symtab, &sym);
+		cvec_push_varptr(&scope->symtab, &s);
+		mem_claim(s);
 	}
 	
-	//Possible this has already been done.  do it again for safety.
-	// 
-	// NOTE(rswinkle): huh?
-	mem_claim(s);
-
 	return s;
 }
 
@@ -185,7 +192,7 @@ Var* eval(Var* v)
  **/
 
 //ufunc.c/h
-extern UFUNC** ufunc_list;
+extern avl_tree_t ufuncs_avl;
 extern int nufunc;
 
 
@@ -198,9 +205,9 @@ Var* ff_list(vfuncptr func, Var* arg)
 {
 	Scope* scope = scope_tos();
 
-	cvector_void* vec = &scope->symtab;
+	cvector_varptr* vec = &scope->symtab;
 
-	Var** v;
+	Var* v;
 	int i;
 	int list_ufuncs = 0, list_sfuncs = 0;
 	Alist alist[3];
@@ -212,8 +219,8 @@ Var* ff_list(vfuncptr func, Var* arg)
 
 	if (list_ufuncs == 0 && list_sfuncs == 0) {
 		for (i=0; i<vec->size; ++i) {
-			v = CVEC_GET_VOID(vec, Var*, i);
-			if (V_NAME(*v)) pp_print_var(*v, V_NAME(*v), 0, 0);
+			v = vec->a[i];
+			if (V_NAME(v)) pp_print_var(v, V_NAME(v), 0, 0, NULL);
 		}
 			
 	} else {
@@ -230,8 +237,12 @@ Var* ff_list(vfuncptr func, Var* arg)
 
 		names = calloc(nfuncs, sizeof(char*));
 		if (list_ufuncs) {
-			for (i = 0; i < nufunc; i++) {
-				names[i] = strdup(ufunc_list[i]->name);
+			i=0;
+			avl_node_t* cur = avl_head(&ufuncs_avl);
+			while (cur) {
+				UFUNC* u = avl_ref(cur, UFUNC, node);
+				names[i++] = strdup(u->name);
+				cur = avl_next(cur);
 			}
 			count += nufunc;
 		}

@@ -77,13 +77,13 @@ libdavinci_la_LIBADD = $(MY_READLINE_LDADD) $(MY_IOMEDLEY_LDADD) $(MY_MODULES_LI
 libdavinci_la_LDFLAGS =  -version-info @LIB_CURRENT@:@LIB_REVISION@:@LIB_AGE@
 
 libdavinci_la_SOURCES = apifunc.c array.c avl.c binDCT.c \
-	darray.c \
-	dct.c deghost.C dvio.c dvio_ascii.c \
+	narray.c \
+	dct.c deghost.cpp dvio.c dvio_ascii.c \
 	dvio_aviris.c dvio_envi.c dvio_ers.c dvio_goes.c dvio_grd.c \
 	dvio_hdf.c dvio_imath.c dvio_iomedley.c dvio_isis.c dvio_magic.c \
 	dvio_pds.c dvio_isis3.c dvio_pnm.c dvio_raw.c dvio_specpr.c dvio_csv.c \
 	dvio_themis.c dvio_vicar.c dvio_xml.c endian_norm.c ff_ffill.c\
-	error.c ff.c ff_ascii.c ff_avg.c ff_ipi.c ff_contour.c ff_rotate.c\
+	error.c ff.c ff_avg.c ff_ipi.c ff_contour.c ff_rotate.c\
 	ff_bbr.c ff_cluster.c ff_convolve.c ff_deghost.c ff_display.c \
 	ff_fft.c ff_filetype.c ff_fncc.c ff_gnoise.c ff_gplot.c ff_vplot.c\
 	ff_header.c ff_hstretch.c ff_ifill.c ff_interp.c ff_ix.c \
@@ -102,15 +102,15 @@ libdavinci_la_SOURCES = apifunc.c array.c avl.c binDCT.c \
 	pp_math.c printf.c reserved.c \
 	rice.c rpos.c scope.c \
 	spread.c string.c symbol.c \
-	system.c tools.c \
+	system.c \
 	ufunc.c \
 	x.c xrt_print_3d.c \
-	XformTable.h darray.h fit.h trigtbl.h api.h dos.h func.h \
+	XformTable.h narray.h fit.h trigtbl.h api.h dos.h func.h \
 	ufunc.h dvio.h dvio_pds4.h header.h \
 	version.h apidef.h dvio_specpr.h help.h \
 	xrt_print_3d.h avl.h endian_norm.h io_loadmod.h scope.h \
 	ff.h system.h ff_modules.h module_io.h \
-	toolbox.h configwin.h fft.h motif_tools.h tools.h \
+	toolbox.h configwin.h fft.h motif_tools.h \
 	lexer.c parser.c parser.h y_tab.h \
 	ff_gconvolve.c ff_warp.c ff_median.c ff_radial.c ff_window.c \
 	dvio_fits.c ff_extract.c dvio_tdb.c \
@@ -123,6 +123,9 @@ library_includedir=$(includedir)/@PACKAGE@
 library_include_HEADERS = $(wildcard *.h)
 
 davinci_LDADD = -ldavinci $(MY_MODULES_LIB)  $(MY_LIBLTDLC_LDADD)
+
+#export-dynamic is not supported for PE+ targets (ie mingw windows)
+# we use --export-all-symbols in davinci_build/windows/makewin.sh
 davinci_LDFLAGS = -export-dynamic
 davinci_SOURCES = main.c
 

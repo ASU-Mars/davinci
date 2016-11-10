@@ -47,7 +47,7 @@
 #include <stdlib.h>
 #include <string.h>
 #ifndef __CYGWIN__
-#include <unistd.h>
+//#include <unistd.h>
 #endif
 
 #define PF(out, f, func)                                               \
@@ -71,7 +71,8 @@
 static void escape __P((char*));
 static int getchr __P((Var*, char*));
 static int getdouble __P((Var*, double*));
-static int getint __P((Var*, int*));
+static i64 get_i64 __P((Var*, i64*));
+static u64 get_u64 __P((Var*, u64*));
 static int getstr __P((Var*, char**));
 static char* mklong __P((char*, int));
 static int dv_asprintf(char**, char*, ...);
@@ -112,7 +113,7 @@ Var* ff_fprintf(vfuncptr func, Var* arg)
 		} else {
 			/* CHECK THIS??? */
 			filename = V_STRING(v);
-			strcpy(buf, filename);
+			strncpy(buf, filename, 1024);
 
 			fname = dv_locate_file(filename);
 			if (fname == NULL) {
@@ -184,7 +185,8 @@ char* str_append(char* s1, char* s2)
 char* do_sprintf(int ac, Var** av)
 {
 	static char *skip1, *skip2;
-	int end, fieldwidth, precision;
+	int end;
+	i64 fieldwidth, precision;
 	char convch, nextch, *format, *fmt, *start;
 	Var *v, *e;
 	char* out;
@@ -249,7 +251,7 @@ char* do_sprintf(int ac, Var** av)
 		for (; strchr(skip1, *fmt); ++fmt)
 			;
 		if (*fmt == '*') {
-			if (!getint(av[gv++], &fieldwidth)) {
+			if (!get_i64(av[gv++], &fieldwidth)) {
 				free(out);
 				return NULL;
 			}
@@ -265,7 +267,7 @@ char* do_sprintf(int ac, Var** av)
 			/* precision present? */
 			++fmt;
 			if (*fmt == '*') {
-				if (!getint(av[gv++], &precision)) {
+				if (!get_i64(av[gv++], &precision)) {
 					free(out);
 					return NULL;
 				}
@@ -310,20 +312,35 @@ char* do_sprintf(int ac, Var** av)
 			PF(out, start, p);
 			break;
 		}
-		case 'd':
-		case 'i':
 		case 'o':
 		case 'u':
 		case 'x':
 		case 'X': {
-			int p;
+			u64 p;
 			char* f;
 
-			if (!(f = mklong(start, convch)) || !getint(av[gv++], &p)) {
+			//mklong can never return NULL, see definition
+			f = mklong(start, convch);
+			if (!get_u64(av[gv++], &p)) {
 				free(out);
 				return NULL;
 			}
-			PF(out, f, (long)p);
+			PF(out, f, p);
+			break;
+		}
+
+		case 'd':
+		case 'i': {
+			i64 p;
+			char* f;
+
+			//mklong can never return NULL, see definition
+			f = mklong(start, convch);
+			if (!get_i64(av[gv++], &p)) {
+				free(out);
+				return NULL;
+			}
+			PF(out, f, p);
 			break;
 		}
 		case 'e':
@@ -454,7 +471,7 @@ static int getstr(Var* v, char** ip)
 	return 1;
 }
 
-static int getint(Var* v, int* ip)
+static i64 get_i64(Var* v, i64* ip)
 {
 	Var* e;
 
@@ -471,7 +488,28 @@ static int getint(Var* v, int* ip)
 		parse_error(NULL);
 		return 0;
 	}
-	*ip = extract_int(v, 0);
+	*ip = extract_i64(v, 0);
+	return 1;
+}
+
+static u64 get_u64(Var* v, u64* up)
+{
+	Var* e;
+
+	if (v == NULL) return 0;
+	if ((e = eval(v)) == NULL) {
+		sprintf(error_buf, "Variable not found: %s", V_NAME(v));
+		parse_error(NULL);
+		return 0;
+	}
+	v = e;
+
+	if (V_TYPE(v) != ID_VAL) {
+		sprintf(error_buf, "sprintf: Expected a value");
+		parse_error(NULL);
+		return 0;
+	}
+	*up = extract_u64(v, 0);
 	return 1;
 }
 
@@ -520,21 +558,6 @@ static int getdouble(Var* v, double* ip)
 #include <stdio.h>
 #include <string.h>
 
-unsigned long strtoul();
-/* char *malloc (); */
-
-#ifndef va_copy
-#ifdef __va_copy
-#define va_copy(DEST, SRC) __va_copy((DEST), (SRC))
-#else
-#ifdef HAVE_VA_LIST_AS_ARRAY
-#define va_copy(DEST, SRC) (*(DEST) = *(SRC))
-#else
-#define va_copy(DEST, SRC) ((DEST) = (SRC))
-#endif
-#endif
-#endif
-
 static int dv_int_vasprintf(char** result, char* format, va_list args)
 {
 	char* p = format;
@@ -565,13 +588,13 @@ static int dv_int_vasprintf(char** result, char* format, va_list args)
 			/* Should be big enough for any format specifier except %s.  */
 			total_width += 30;
 			switch (*p) {
+			case 'c':
 			case 'd':
-			case 'i':
+			case 'i': (void)va_arg(args, int); break;
 			case 'o':
 			case 'u':
 			case 'x':
-			case 'X':
-			case 'c': (void)va_arg(args, int); break;
+			case 'X': (void)va_arg(args, unsigned); break;
 			case 'f':
 			case 'e':
 			case 'E':

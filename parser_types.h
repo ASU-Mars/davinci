@@ -1,16 +1,18 @@
 #ifndef PARSER_TYPES_H
 #define PARSER_TYPES_H
 
-#include "darray.h"
+#include "narray.h"
 #include "ff_modules.h"
+#include "cvector.h"
 
 //for size_t
 #include <stdlib.h>
 
 #include <stdint.h>
+#include <inttypes.h>
 
 typedef struct _var Var;
-typedef Var* Vptr;
+typedef Var* varptr;
 /* dvModule is defined in ff_modules.h */
 typedef struct _vfuncptr* vfuncptr;
 typedef Var* (*vfunc)(struct _vfuncptr*, Var*); /* function caller */
@@ -81,6 +83,9 @@ struct _var {
 };
 
 
+CVEC_NEW_DECLS2(varptr)
+
+
 struct _vfuncptr {
 	const char* name;
 	vfunc fptr;
@@ -123,13 +128,12 @@ typedef struct Alist {
 #define V_INT64(v) (*((i64*)V_DATA(v)))
 
 // historical type names
-// TODO(rswinkle) change V_INT based on arch?  uncomment V_INT64?
 #define V_BYTE(v) (*((u8*)V_DATA(v)))
 #define V_SHORT(v) (*((i16*)V_DATA(v)))
 #define V_INT(v) (*((i32*)V_DATA(v)))
 
-#define V_FLOAT(v) (*((float*)V_DATA(v)))   /* derefernce as a single float */
-#define V_DOUBLE(v) (*((double*)V_DATA(v))) /* derefernce as a single dbl */
+#define V_FLOAT(v) (*((float*)V_DATA(v)))
+#define V_DOUBLE(v) (*((double*)V_DATA(v)))
 
 
 #define V_FORMAT(v) V_SYM(v)->format
@@ -242,6 +246,22 @@ enum {
 // else if (format <= DV_DOUBLE)
 //
 // and similar checks work
+//
+// If we wanted it make it easy to do simple C style type promotion
+// for operations between types we'd arange them like this
+//
+// DV_INT8,
+// DV_UINT8,
+// DV_INT16,
+// DV_UINT16,
+// ...
+// DV_FLOAT,
+// DV_DOUBLE
+//
+// but that'd require a lot more changes and make it much
+// harder to quickly determine signedness
+//
+// see misc.c::combine_formats()
 //
 enum {
 	DV_UINT8 = 1,

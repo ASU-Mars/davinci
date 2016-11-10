@@ -159,9 +159,8 @@ static int genObjClassCmpr(const void* v1, const void* v2)
 	return strcasecmp(s1, s2);
 }
 
-static int make_int(char* number)
+static i64 make_int(char* number)
 {
-	char* base;
 	char* radix;
 	int r_flag = 0;
 	int len;
@@ -179,44 +178,51 @@ static int make_int(char* number)
 		i++;
 	}
 
-	if (!(r_flag)) /*Didn't find it, regular int */
-		return (atoi(number));
+	// Didn't find it, regular int
+	if (!r_flag) {
+		return strtoimax(number, NULL, 10);
+	}
 
-	/*Gotta convert it! */
-
-	number[i] = '\0'; /*Null it at first # */
+	// Gotta convert it!
+	number[i] = '\0'; // Null it at first #
 	radix     = strdup(number);
 	i++;
-	offset = i; /*Start string here now */
+	offset = i; // Start string here now
 
 	while (i < len) {
-		if (number[i] == '#') { /*Other one */
+		if (number[i] == '#') { // Other one
 			number[i] = '\0';
-			base      = strdup((number + offset));
-			return ((int)strtol(base, NULL, atoi(radix)));
+			i64 ret = strtoimax(&number[offset], NULL, atoi(radix));
+			free(radix);
+			return ret;
 		}
 		i++;
 	}
+	free(radix);
 
-	return (0); /*No 2nd #? Then it's junk */
+	return 0; /*No 2nd #? Then it's junk */
 }
 
 static Var* do_key(KEYWORD* key)
 {
-
 	unsigned short kwv;
 	Var* o = NULL;
-	int* i;
 	double* f;
+
+	i64 i;
+
 
 	kwv = OdlGetKwdValueType(key);
 
 	switch (kwv) {
 
 	case ODL_INTEGER:
-		i  = (int*)calloc(1, sizeof(int));
-		*i = make_int(key->value);
-		o  = newVal(BSQ, 1, 1, 1, DV_INT32, i);
+		i = make_int(key->value);
+		if (i <= INT32_MAX && i >= INT32_MIN) {
+			o = newInt(i);
+		} else {
+			o = new_i64(i);
+		}
 		break;
 	case ODL_REAL:
 		f  = (double*)calloc(1, sizeof(double));
@@ -270,11 +276,13 @@ static Var* do_key(KEYWORD* key)
 			}
 
 			switch (ptype) {
-			case ODL_INTEGER:
-				i = (int*)malloc(num * sizeof(int));
+			case ODL_INTEGER: {
+				//TODO(rswinkle): determine if 64-bit is necessary.  Don't want to
+				//double the memory use unnecessarily.
+				int* i = malloc(num * sizeof(int));
 				for (ii = 0; ii < num; ii++) i[ii] = atoi(stuff[ii]);
 				o                                  = newVal(BSQ, num, 1, 1, DV_INT32, i);
-				break;
+			} break;
 
 			case ODL_REAL:
 				f = (double*)malloc(num * sizeof(double));
@@ -297,6 +305,11 @@ static Var* do_key(KEYWORD* key)
 			V_STRING(o)    = (char*)calloc(1, sizeof(char));
 			V_STRING(o)[0] = '\0';
 		}
+		//free array
+		for (int j=0; j<num; ++j) {
+			free(stuff[j]);
+		}
+		free(stuff);
 	} break;
 
 	default:
@@ -391,8 +404,12 @@ static KEYWORD* traverseGroup(KEYWORD* kw, Var* v)
 				free(oldGroupName);
 			}
 			add_struct(v, groupName, sub);
+			free(groupName);
 		} else {
-			add_struct(v, fix_name(kwName), do_key(kw));
+			//fix_name is stupid, should be done in place, add_struct strdups key
+			char* tmp = fix_name(kwName);
+			add_struct(v, tmp, do_key(kw));
+			free(tmp);
 		}
 	}
 	return kw;
@@ -561,8 +578,18 @@ static Var* traverseObj(OBJDESC* top, Var* v, dataKey objSizeMap[], int* nObj, O
 		kwName = OdlGetKwdName(kw);
 
 		if (kw->is_a_pointer) {
-			kwName = fix_name(mod_name_if_necessary(kwName));
-			add_struct(v, kwName, decodePtr(kw));
+			//kwName = fix_name(mod_name_if_necessary(kwName));
+			//add_struct(v, kwName, decodePtr(kw));
+			//
+			char* tmp = mod_name_if_necessary(kwName);
+			char* tmp2 = fix_name(tmp);
+			add_struct(v, tmp2, decodePtr(kw));
+			free(tmp2);
+			//Need to free tmp if tmp != kwName
+			if (tmp != kwName) {
+				free(tmp);
+			}
+
 		} else if (strcasecmp(kwName, KW_GROUP) == 0) {
 			groupName = fix_name(OdlGetKwdValue(kw));
 
@@ -574,8 +601,11 @@ static Var* traverseObj(OBJDESC* top, Var* v, dataKey objSizeMap[], int* nObj, O
 				free(oldGroupName);
 			}
 			add_struct(v, groupName, sub);
+			free(groupName);
 		} else {
-			add_struct(v, fix_name(kwName), do_key(kw));
+			char* tmp = fix_name(kwName);
+			add_struct(v, tmp, do_key(kw));
+			free(tmp);
 		}
 	}
 
@@ -600,6 +630,11 @@ static Var* traverseObj(OBJDESC* top, Var* v, dataKey objSizeMap[], int* nObj, O
 		    (objName = find_obj_name(sub)) == NULL) {
 			objName = objClass;
 		}
+
+		// NOTE(rswinkle): old pointer is still stored elsewhere and freed elsewhere
+		// Honestly io_lablib3 + toolbox.h + dvio_pds.c is some of the worst, most convoluted memory
+		// management I've ever seen, and fix_name doesn't help.  Valgrind originally had
+		// 248 errors (of all kinds, not just leaks).  I've gotten it down to 0.
 		objName = fix_name(objName);
 
 		if (find_struct(v, objName, &tmpVar) >= 0) {
@@ -609,12 +644,11 @@ static Var* traverseObj(OBJDESC* top, Var* v, dataKey objSizeMap[], int* nObj, O
 		}
 		add_struct(v, objName, sub);
 
-		if (bsearch(&genObjClass, handledObjTypes, nHandledObjTypes, sizeof(char*), genObjClassCmpr)) {
+		if (objSizeMap && bsearch(&genObjClass, handledObjTypes, nHandledObjTypes, sizeof(char*), genObjClassCmpr)) {
 			/* obj-class is one that we handle reading data for - add it to the list for data read
 			 */
-			objSizeMap[*nObj].Name = strdup(fix_name(objName)); /* holds objName - for readData  */
-			objSizeMap[*nObj].ObjClass =
-			    strdup(fix_name(objClass)); /* holds objClass - for resolvePointers */
+			objSizeMap[*nObj].Name = objName; /* holds objName - for readData  */
+			objSizeMap[*nObj].ObjClass = fix_name(objClass); /* holds objClass - for resolvePointers */
 			objSizeMap[*nObj].size      = getObjSize(sub);
 			objSizeMap[*nObj].objDesc   = op;
 			objSizeMap[*nObj].Obj       = v;
@@ -665,7 +699,14 @@ static int resolvePointers(char* fname, OBJDESC* top, Var* topVar, dataKey objSi
 				// Extract a dir prefixed filename
 				path = (char*)alloca(strlen(V_STRING(vFName)) + strlen(fname) + 1);
 				strcpy(path, fname);
-				strcpy(path, dirname(path));
+
+				// src and dest must not overlap in strcpy and dirname
+				// doesn't have to allocate a new string.  We should just
+				// use our own dirname/basename in system.c or io_lablib3.c
+				// always so we know/control what it does
+				char* tmpdir = dirname(path);
+				memmove(path, tmpdir, strlen(tmpdir)+1);
+
 				strcat(path, "/");
 				// strcat(path, V_STRING(vFName));
 				strcat(path, basename(V_STRING(vFName)));
@@ -920,9 +961,9 @@ static void ProcessObjectIntoLabel(FILE* fp, int record_bytes, Var* v, char* nam
 	int bands;
 
 	char** name_list;
-	int sample_idx = (-1);
-	int line_idx   = (-1);
-	int band_idx   = (-1);
+	int sample_idx = -1;
+	int line_idx   = -1;
+	int band_idx   = -1;
 
 	fprintf(fp, "OBJECT = %s\r\n", name);
 
@@ -1012,17 +1053,17 @@ static void ProcessObjectIntoLabel(FILE* fp, int record_bytes, Var* v, char* nam
 	** size accordingly.
 	*/
 
-	else if ((!(strcasecmp("spectral_qube", name))) || (!(strcasecmp("qube", name))) ||
-	         (!(strcasecmp("image", name)))) { /*We're processing a qube */
+	else if (!strcasecmp("spectral_qube", name) || !strcasecmp("qube", name) ||
+	         !strcasecmp("image", name)) { /*We're processing a qube */
 
 		count = get_struct_names(v, &name_list, NULL);
 
 		for (i = 0; i < count && name_list[i] != NULL; i++) {
-			if (!(strcasecmp("sample_suffix", name_list[i])))
+			if (!strcasecmp("sample_suffix", name_list[i]))
 				sample_idx = i;
-			else if (!(strcasecmp("line_suffix", name_list[i])))
+			else if (!strcasecmp("line_suffix", name_list[i]))
 				line_idx = i;
-			else if (!(strcasecmp("band_suffix", name_list[i])))
+			else if (!strcasecmp("band_suffix", name_list[i]))
 				band_idx = i;
 
 			free(name_list[i]);
@@ -1605,14 +1646,16 @@ static Var* do_loadPDS(vfuncptr func, char* filename, int data, int suffix_data)
 		return (NULL);
 	}
 
-	/**
-	*** What about compression?
-	**/
+	// What about compression?
 	if ((fp = fopen(fname, "rb")) != NULL) {
 		if (iom_is_compressed(fp)) {
 			/* fprintf(stderr, "is compressed\n");    FIX: remove */
 			fclose(fp);
-			fname = iom_uncompress_with_name(fname);
+
+			char* tmp = iom_uncompress_with_name(fname);
+			free(fname);
+			fname = tmp;
+
 			fp    = fopen(fname, "rb");
 		}
 	}
@@ -1656,7 +1699,13 @@ static Var* do_loadPDS(vfuncptr func, char* filename, int data, int suffix_data)
 		readDataForObjects(v, objSize, nObj, suffix_data, 1);
 	}
 
-	// TODO Free space consumed by FileNames allocated within objSize array
+	for (i=0; i < nObj; ++i) {
+		free(objSize[i].Name);
+		free(objSize[i].ObjClass);
+		free(objSize[i].FileName);
+	}
+	free(fname);
+
 	OdlFreeTree(ob);
 
 	if (get_struct_count(v) == 0) {
@@ -1755,7 +1804,7 @@ static int rfQube(const dataKey* objSize, Var* vQube, int load_suffix_data)
 		return 0;
 	}
 
-	add_struct(vQube, fix_name("DATA"), data);
+	add_struct(vQube, "data", data);
 
 	if (load_suffix_data) {
 		suffix_data = dv_LoadISISSuffixesFromPDS_New(fp, fileName, objSize->dptr, objSize->objDesc);
@@ -1767,12 +1816,13 @@ static int rfQube(const dataKey* objSize, Var* vQube, int load_suffix_data)
 		/* create a suffix part only when there are suffixes, i.e.
 		   avoid blank suffix structure */
 		if (get_struct_count(suffix_data) > 0) {
-			add_struct(vQube, fix_name("SUFFIX_DATA"), suffix_data);
+			add_struct(vQube, "suffix_data", suffix_data);
 		} else {
+			// NOTE(rswinkle): because suffix_data is created (once you drill down) with
+			// mem_malloc, you could just let it get freed automatically when the scope is
+			// cleaned (see scope.c).
 			mem_claim(suffix_data);
-			free_struct(suffix_data);
-			/* NOTE: if one does not do mem_claim and free_struct
-			   the garbage collector will take care of it */
+			free_var(suffix_data);
 		}
 	}
 
@@ -1822,15 +1872,15 @@ static int rfTable(dataKey* objSize, Var* ob, LABEL* label)
 	pickFilename(fileName, objSize->FileName);
 	parse_error("Reading %s from %s...\n", objSize->Name, fileName);
 
-	f         = (FIELD**)label->fields->ptr;
-	num_items = label->fields->number; /*This is a count of BOTH columns AND bit-columns */
+	f         = (FIELD**)label->fields.a;
+	num_items = label->fields.size; // This is a count of BOTH columns AND bit-columns
 
-	/*Add new structure to parent ob*/
+	// Add new structure to parent ob
 	data = new_struct(0);
 
-	/*Initialize a set of buffers to read in the data */
+	// Initialize a set of buffers to read in the data
 	bufs   = (char**)calloc(num_items, sizeof(char*));
-	tmpbuf = (char*)calloc(label->reclen, sizeof(char));
+	tmpbuf = (char*)calloc(label->reclen, 1);
 	size   = (int*)calloc(num_items, sizeof(int));
 	for (j = 0; j < num_items; j++) {
 		size[j] = f[j]->dimension ? f[j]->size * f[j]->dimension : f[j]->size;
@@ -1839,6 +1889,9 @@ static int rfTable(dataKey* objSize, Var* ob, LABEL* label)
 
 	Offset = objSize->dptr;
 
+	// TODO(rswinkle): Why are we using open/read instead of fopen/fread?
+	// and while we're at it why are we reading into an allocated buffer just to allocate
+	// another and copy it when creating the davinci arrays?
 #if defined(__CYGWIN__) || defined(__MINGW32__)
 	fd = open(fileName, O_RDONLY | O_BINARY, 0);
 #else
@@ -1874,7 +1927,8 @@ static int rfTable(dataKey* objSize, Var* ob, LABEL* label)
 	if (rc) {
 		/*Set each field Var's data and parameter information */
 		Set_Col_Var(&data, f, label, size, bufs);
-		add_struct(ob, fix_name("DATA"), data);
+
+		add_struct(ob, "data", data);
 	}
 
 	free(tmpbuf);
@@ -1990,7 +2044,7 @@ static void Set_Col_Var(Var** Data, FIELD** f, LABEL* label, int* size, char** B
 	int num_fields;
 	int nitems;
 
-	num_fields = label->fields->number;
+	num_fields = label->fields.size;
 
 	/**
 	*** Note: the calloc in all these routines is stupid, as it
@@ -2026,7 +2080,6 @@ static void Set_Col_Var(Var** Data, FIELD** f, LABEL* label, int* size, char** B
 			v = newVal(BSQ, dim, label->nrows, 1, DV_DOUBLE, data);
 		} else {
 
-			//TODO(rswinkle): add new integer types
 			switch (f[j]->eformat) {
 			case CHARACTER:
 				text = (char**)calloc(label->nrows, sizeof(char*));
@@ -2041,51 +2094,47 @@ static void Set_Col_Var(Var** Data, FIELD** f, LABEL* label, int* size, char** B
 			case MSB_INTEGER:
 			case LSB_INTEGER:
 				switch (f[j]->size) {
+				case 8:
+					data = malloc(size[j] * label->nrows);
+					memcpy(data, Bufs[j], size[j] * label->nrows);
+					v = newVal(BSQ, dim, label->nrows, 1, DV_INT64, data);
+					break;
 				case 4:
-					data = calloc(size[j] * label->nrows, sizeof(char));
+					data = malloc(size[j] * label->nrows);
 					memcpy(data, Bufs[j], size[j] * label->nrows);
 					v = newVal(BSQ, dim, label->nrows, 1, DV_INT32, data);
 					break;
 				case 2:
-					data = calloc(size[j] * label->nrows, sizeof(char));
+					data = malloc(size[j] * label->nrows);
 					memcpy(data, Bufs[j], size[j] * label->nrows);
 					v = newVal(BSQ, dim, label->nrows, 1, DV_INT16, data);
 					break;
 				case 1:
-					// davinci DV_UINT8 type is unsigned char
-					data =
-					    calloc(size[j] * 2 * label->nrows, sizeof(char)); // upscale the data type
-					for (k = 0; k < nitems; k++) {
-						*(short*)(data + k * sizeof(short)) =
-						    (short)*(unsigned char*)(Bufs[j] + k * sizeof(char));
-					}
-					v = newVal(BSQ, dim, label->nrows, 1, DV_INT16, data);
+					data = malloc(size[j] * label->nrows);
+					memcpy(data, Bufs[j], size[j] * label->nrows);
+					v = newVal(BSQ, dim, label->nrows, 1, DV_INT8, data);
 				}
 				break;
 
 			case MSB_UNSIGNED_INTEGER:
 			case LSB_UNSIGNED_INTEGER:
 				switch (f[j]->size) {
+				case 8:
+					data = malloc(size[j] * label->nrows);
+					memcpy(data, Bufs[j], size[j] * label->nrows);
+					v = newVal(BSQ, dim, label->nrows, 1, DV_UINT64, data);
+					break;
 				case 4:
-					data =
-					    calloc(size[j] * 2 * label->nrows, sizeof(char)); // upscale the data type
-					for (k = 0; k < nitems; k++) {
-						*(double*)(data + k * sizeof(double)) =
-						    (double)*(unsigned int*)(Bufs[j] + k * sizeof(int));
-					}
-					v = newVal(BSQ, dim, label->nrows, 1, DV_DOUBLE, data);
+					data = malloc(size[j] * label->nrows);
+					memcpy(data, Bufs[j], size[j] * label->nrows);
+					v = newVal(BSQ, dim, label->nrows, 1, DV_UINT32, data);
 					break;
 				case 2:
-					data =
-					    calloc(size[j] * 2 * label->nrows, sizeof(char)); // upscale the data type
-					for (k = 0; k < nitems; k++) {
-						*(int*)(data + k * sizeof(int)) =
-						    (int)*(unsigned short*)(Bufs[j] + k * sizeof(short));
-					}
-					v = newVal(BSQ, dim, label->nrows, 1, DV_INT32, data);
+					data = malloc(size[j] * label->nrows);
+					memcpy(data, Bufs[j], size[j] * label->nrows);
+					v = newVal(BSQ, dim, label->nrows, 1, DV_UINT16, data);
 					break;
 				case 1:
-					// davinci DV_UINT8 type is unsigned char
 					data = calloc(size[j] * label->nrows, sizeof(char));
 					memcpy(data, Bufs[j], size[j] * label->nrows);
 					v = newVal(BSQ, dim, label->nrows, 1, DV_UINT8, data);
@@ -2103,12 +2152,15 @@ static void Set_Col_Var(Var** Data, FIELD** f, LABEL* label, int* size, char** B
 				}
 				break;
 
+			// NOTE(rswinkle): What's the actual range of this format in a PDS file?
+			// Should it be int64?
 			case ASCII_INTEGER:
 				data = calloc(sizeof(int) * label->nrows, sizeof(char));
 				for (i = 0; i < (label->nrows * dim); i++) {
 					memcpy(num, Bufs[j] + f[j]->size * i, f[j]->size);
 					num[f[j]->size] = '\0';
 					inum            = atoi(num);
+					printf("inum = %d\n", inum);
 					memcpy((char*)data + step, &inum, sizeof(int));
 					step += sizeof(int);
 				}
@@ -2129,6 +2181,7 @@ static void Set_Col_Var(Var** Data, FIELD** f, LABEL* label, int* size, char** B
 				v = newVal(BSQ, dim, label->nrows, 1, DV_DOUBLE, data);
 				break;
 
+			// NOTE(rswinkle): Should this be unsigned?  or int64?
 			case BYTE_OFFSET:
 				data = calloc(size[j] * label->nrows, sizeof(char));
 				memcpy(data, Bufs[j], size[j] * label->nrows);
@@ -2172,8 +2225,13 @@ static int rfImage(dataKey* objSize, Var* ob)
 	}
 
 	data = dv_LoadImage_New(fp, fileName, objSize->dptr, objSize->objDesc);
-	if (data != NULL) {
-		// add_struct(ob, fix_name("DATA"), data); // drd this is what was here
+	if (data) {
+		// NOTE(rswinkle): something like the following line was used everywhere
+		// you see an add_struct with "data" and also with "suffix_data".  There's 
+		// no reason to call fix_name on a known string.  Wasted work and memory leaks
+		// just to lowercase something you could put there yourself?  What was the point?
+		// add_struct(ob, fix_name("DATA"), data);
+
 		add_struct(ob, "data", data);
 		rc = 1;
 	}
@@ -2204,7 +2262,7 @@ static int rfHistogram(dataKey* objSize, Var* ob)
 
 	data = dv_LoadHistogram_New(fp, fileName, objSize->dptr, objSize->objDesc);
 	if (data != NULL) {
-		add_struct(ob, fix_name("DATA"), data);
+		add_struct(ob, "data", data);
 		rc = 1;
 	}
 
@@ -2232,18 +2290,14 @@ static char* history_parse_buffer(FILE* in)
 		strcpy((TheString + ptr), buf);
 		ptr += strlen(buf);
 
-		if (!(strncasecmp("END", buf, 3))) {
-			if (!(strncasecmp("END_", buf, 4))) {
-				continue;
-			} else {
-				break;
-			}
+		if (!strncasecmp("END", buf, 3) && buf[3] != '_') {
+			break;
 		}
 	}
 
-	TheString = (char*)realloc(TheString, strlen(TheString));
+	TheString = (char*)realloc(TheString, strlen(TheString)+1);
 
-	return (TheString);
+	return TheString;
 }
 
 /*
@@ -2258,9 +2312,7 @@ static char* history_remove_isis_indents(const char* history)
 	char* src_hist   = strdup(history);
 	int src_hist_len = strlen(history);
 	char* tgt_hist   = NULL;
-	char *line, **lines;
-	char* p;
-	LIST* lines_list;
+	char *line, *p;
 	regex_t indent_regex;
 	regmatch_t matches[1];
 	int i, n;
@@ -2272,20 +2324,22 @@ static char* history_remove_isis_indents(const char* history)
 		return NULL;
 	}
 
-	lines_list = new_list();
+	cvector_str lines;
+	cvec_str(&lines, 0, 20);
 	for (p = src_hist; line = strtok(p, "\n"); p = NULL) {
-		list_add(lines_list, line);
+		cvec_push_str(&lines, line);
 	}
 
-	n     = list_count(lines_list);
-	lines = (char**)list_data(lines_list);
+	n = lines.size;
 
 	for (i = 0; i < n; i++) {
 		/* remove ISIS style vertical-bar indent-end marker */
-		rc = regexec(&indent_regex, lines[i], sizeof(matches) / sizeof(regmatch_t), matches, 0);
+		rc = regexec(&indent_regex, lines.a[i], sizeof(matches) / sizeof(regmatch_t), matches, 0);
 		if (rc == 0) {
 			/* a match was found: get rid of indent */
-			strcpy(lines[i], &lines[i][matches[0].rm_eo]);
+			//src and dst must not overlap for strcpy so have to use memmove
+			//strcpy(lines[i], &lines[i][matches[0].rm_eo]);
+			memmove(lines.a[i], &lines.a[i][matches[0].rm_eo], strlen(&lines.a[i][matches[0].rm_eo])+1);
 		}
 	}
 
@@ -2297,10 +2351,10 @@ static char* history_remove_isis_indents(const char* history)
 		if (i > 0) {
 			strcat(tgt_hist, "\n");
 		}
-		strcat(tgt_hist, lines[i]);
+		strcat(tgt_hist, lines.a[i]);
 	}
 
-	list_free(lines_list);
+	cvec_free_str(&lines);
 	free(src_hist);
 
 	return tgt_hist;
@@ -2345,7 +2399,10 @@ static int rfHistory(dataKey* objSize, Var* ob)
 	top = OdlParseLabelString(history, NULL, ODL_EXPAND_STRUCTURE, VERBOSE == 0);
 	traverseObj(top, data, NULL, 0, top, data);
 
-	if (get_struct_count(data)) add_struct(ob, fix_name("DATA"), data);
+	if (get_struct_count(data)) add_struct(ob, "data", data);
+
+	OdlFreeTree(top);
+	free(history);
 
 	return 1;
 }
@@ -2362,6 +2419,9 @@ static int GetInt(OBJDESC* ob, char* key, int* val)
 }
 
 // remove the pds header from a file
+//
+// NOTE(rswinkle): This is not documented anywhere, wiki or dv.gih and not
+// used in the library.
 Var* ff_pdshead(vfuncptr func, Var* arg)
 {
 	OBJDESC* ob;
@@ -2369,18 +2429,16 @@ Var* ff_pdshead(vfuncptr func, Var* arg)
 	char buf[8192];
 	char *fname = NULL, *outfname = NULL;
 	int fd = -1, ofd = -1;
-	int convert_short = 0;
 	int data          = 0;
 	int fdata         = 0;
 	char t;
 
-	Alist alist[6];
+	Alist alist[5];
 	alist[0]      = make_alist("fname", ID_STRING, NULL, &fname);
 	alist[1]      = make_alist("outfname", ID_STRING, NULL, &outfname);
-	alist[2]      = make_alist("convert_short", DV_INT32, NULL, &convert_short);
-	alist[3]      = make_alist("data", DV_INT32, NULL, &data);
-	alist[4]      = make_alist("fdata", DV_INT32, NULL, &fdata);
-	alist[5].name = NULL;
+	alist[2]      = make_alist("data", DV_INT32, NULL, &data);
+	alist[3]      = make_alist("fdata", DV_INT32, NULL, &fdata);
+	alist[4].name = NULL;
 
 	if (parse_args(func, arg, alist) == 0) return (NULL);
 
@@ -2536,10 +2594,13 @@ static void print_pds4_structs(LABEL* label, dataKey* data_key)
 		printf("label->name: %s\n", label->name);
 		printf("label->nfields: %d\n", label->nfields);
 		printf("label->nrows: %d\n", label->nrows);
-		if (label->fields != NULL) {
-			field_count = list_count(label->fields);
+
+		if (label->fields.size) {
+			//field_count = list_count(label->fields);
+			field_count = label->fields.size;
 			printf("label->fields->count: %d\n", field_count);
-			fields = (FIELD**)list_data(label->fields);
+			//fields = (FIELD**)list_data(label->fields);
+			fields = label->fields.a;
 
 			for (i = 0; i < field_count; i++) {
 				f = fields[i];
@@ -2589,9 +2650,8 @@ static int loadFieldBinary(Var* v, LABEL* label, dataKey* data_key, int use_name
 
 	count = get_struct_count(v);
 
-	if (count > 0 && label->fields == NULL) {
-		label->fields = new_list();
-		if (label->fields == NULL) {
+	if (count > 0 && !label->fields.a) {
+		if (!cvec_init_voidptr(&label->fields, 0, 8, NULL, NULL)) {
 			parse_error("Error allocating memory for a FIELD list\n");
 			return 0;
 		}
@@ -2763,7 +2823,7 @@ FINISH:
 		}
 	}
 	if (field != NULL) {
-		list_add(label->fields, field);
+		cvec_push_voidptr(&label->fields, (void**)&field);
 		label->nfields += 1;
 	}
 	return 1;
@@ -3097,6 +3157,7 @@ static int loadBinaryTable(Var* v, LABEL* label, dataKey* data_key, int use_name
 	return ret_val;
 }
 
+// NOTE(rswinkle): why is label even passed in if it's not used?
 static int loadFileInfo(Var* v, LABEL* label, dataKey* data_key)
 {
 	int i, j;
@@ -3191,7 +3252,7 @@ static Var* xmlParseLabelFiles(Var* v, LABEL* label, dataKey* data_key, int use_
 			    strstr(node_name, FILE_AREA_OBSERVATIONAL) == NULL) {
 				if (data_key == NULL) {
 					// create a new LABEL and pass it in
-					label = malloc(sizeof(LABEL));
+					label = calloc(1, sizeof(LABEL));
 					if (label == NULL) {
 						parse_error(
 						    "Memory allocation error while trying to parse the PDS4 xml label "
@@ -3200,37 +3261,22 @@ static Var* xmlParseLabelFiles(Var* v, LABEL* label, dataKey* data_key, int use_
 						break;
 					}
 				}
-				label->reclen  = 0;
+				//label is zeroed with calloc above so cvectors are already valid
 				label->name    = strdup(node_name);
-				label->nfields = 0;
-				label->nrows   = 0;
-				label->fields  = NULL;
-				label->keys    = NULL;
-				label->table   = NULL;
 
 				// create a new dataKey and pass it in as well
-				data_key = malloc(sizeof(dataKey));
+				data_key = calloc(1, sizeof(dataKey));
 				if (data_key == NULL) {
 					parse_error(
 					    "Memory allocation error while trying to parse the PDS4 xml label files\n");
 					err = 1;
 					break;
 				}
-				data_key->ObjClass = NULL;
-				data_key->Obj      = NULL;
-				data_key->KeyValue = NULL;
+				//data_key is zeroed with calloc above
 				if (file_path != NULL) {
 					data_key->FileName = strdup(file_path);
 					//                   free(file_path);
-				} else {
-					data_key->FileName = NULL;
 				}
-				data_key->dptr      = 0;
-				data_key->size      = 0;
-				data_key->objDesc   = NULL;
-				data_key->pFileDesc = NULL;
-				data_key->pFileVar  = NULL;
-
 				if (!loadFileInfo(s, label, data_key)) {
 					err = 1;
 					break;
@@ -3293,6 +3339,8 @@ static Var* xmlParseLabelFiles(Var* v, LABEL* label, dataKey* data_key, int use_
 			err = 1;
 		}
 	}
+	//TODO(rswinkle): Seems like label should be freed here (including the vectors) since
+	//it doesn't look like it's not returned in any way.
 	if (err) {
 		if (node_name != NULL) {
 			free(node_name);
@@ -3356,6 +3404,8 @@ Var* do_loadPDS4(vfuncptr func, char* filename, int use_names, int get_data)
 	 }
 	 }
 	 */
+
+	printf("loading pds\n");
 
 	labelFile = dv_LoadXML(fname, use_names);
 

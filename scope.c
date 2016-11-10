@@ -1,4 +1,3 @@
-#include "darray.h"
 #include "parser.h"
 
 /*
@@ -12,6 +11,8 @@
    level scope.
 
 */
+
+CVEC_NEW_DEFS2(dict_item, RESIZE)
 
 static cvector_void scope_stack;
 
@@ -74,12 +75,11 @@ Scope* parent_scope()
 
 Var* dd_find(Scope* s, char* name)
 {
-	cvector_void* dd = &s->dd;
 	dict_item* p;
 
 	int i;
-	for (i = 1; i < dd->size; i++) {
-		p = CVEC_GET_VOID(dd, dict_item, i);
+	for (i = 1; i < s->dd.size; i++) {
+		p = &s->dd.a[i];
 		if (p->name && !strcmp(p->name, name)) {
 			return p->value;
 		}
@@ -90,7 +90,7 @@ Var* dd_find(Scope* s, char* name)
 Var* dd_get_argv(Scope* s, int n)
 {
 	if (n < s->args.size) {
-		return CVEC_GET_VOID(&s->args, dict_item, n)->value;
+		return s->args.a[n].value;
 	}
 	return NULL;
 }
@@ -102,12 +102,11 @@ Var* dd_get_argc(Scope* s)
 
 void dd_put(Scope* s, char* name, Var* v)
 {
-	cvector_void* dd = &s->dd;
 	int i;
 	dict_item* p;
 
-	for (i = 1; i < dd->size; i++) {
-		p = CVEC_GET_VOID(dd, dict_item, i);
+	for (i = 1; i < s->dd.size; i++) {
+		p = &s->dd.a[i];
 		if (!strcmp(p->name, name)) {
 			p->value = v;
 			return;
@@ -128,14 +127,14 @@ void dd_put(Scope* s, char* name, Var* v)
 		item.name = strdup(name); // strdup here?
 
 	item.value = v;
-	cvec_push_void(dd, &item);
+	cvec_push_dict_item(&s->dd, &item);
 }
 
 // stick an arg on the end of the arg list.
 // Update argc.
 int dd_put_argv(Scope* s, Var* v)
 {
-	cvector_void* dd = &s->args;
+	cvector_dict_item* dd = &s->args;
 
 	/*
 	** WARNING: This looks like it will break if you try to global a
@@ -147,24 +146,24 @@ int dd_put_argv(Scope* s, Var* v)
 	item.name = V_NAME(v);
 	V_NAME(v) = NULL;
 
-	cvec_push_void(dd, &item);
+	cvec_push_dict_item(dd, &item);
 
-	dict_item* p = CVEC_GET_VOID(dd, dict_item, 0);
 	// subtract 1 for $0
-	V_INT(p->value) = dd->size - 1;
+	V_INT(dd->a[0].value) = dd->size - 1;
 
 	return dd->size - 1;
 }
 
+// NOTE(rswinkle): This literally does nothing!
 void dd_unput_argv(Scope* s)
 {
-	cvector_void* dd = &s->args;
 	Var* v;
 	int i;
 	dict_item* p;
+	cvector_dict_item* dd = &s->args;
 
 	for (i = 1; i < dd->size; i++) {
-		p = CVEC_GET_VOID(dd, dict_item, i);
+		p = &dd->a[i];
 		v         = p->value;
 		V_NAME(v) = p->name;
 	}
@@ -176,23 +175,27 @@ int dd_argc(Scope* s)
 	return s->args.size - 1;
 }
 
+//NOTE(rswinkle): not used anywhere!
 // return argc as a Var
+/*
 Var* dd_argc_var(Scope* s)
 {
-	return CVEC_GET_VOID(&s->args, dict_item, 0);
+	return s->args.a[0].value;
 }
+*/
 
 Var* dd_make_arglist(Scope* s)
 {
-	cvector_void* dd = &s->args;
-	Var* v         = new_struct(dd->size);
 	Var* p;
 	int i;
 	void* zero;
 	dict_item* item;
 
+	cvector_dict_item* dd = &s->args;
+	Var* v         = new_struct(dd->size);
+
 	for (i = 1; i < dd->size; i++) {
-		item = CVEC_GET_VOID(dd, dict_item, i);
+		item = &dd->a[i];
 		if (V_TYPE(item->value) == ID_UNK) {
 			zero = calloc(1, 1);
 			p    = newVal(BSQ, 1, 1, 1, DV_UINT8, zero);
@@ -205,14 +208,14 @@ Var* dd_make_arglist(Scope* s)
 	return v;
 }
 
-void init_dd(cvector_void* d)
+void init_dd(cvector_dict_item* d)
 {
-	cvec_void(d, 1, 1, sizeof(dict_item), NULL, NULL);
+	cvec_dict_item(d, 1, 1, NULL, NULL);
 
-	dict_item* p = CVEC_GET_VOID(d, dict_item, 0);
+	dict_item* p = &d->a[0];
 
 	// Make a var for $argc
-	p->value = (Var*)calloc(1, sizeof(Var));
+	p->value = calloc(1, sizeof(Var));
 
 	// that cast isn't even necessary right?
 	// why don't we use newInt?  Why don't we want to mem_malloc it?
@@ -221,23 +224,26 @@ void init_dd(cvector_void* d)
 	V_TYPE(p->value) = ID_VAL;
 }
 
+void free_var2(void* v)
+{
+	free_var(*(Var**)v);
+}
 
 void init_scope(Scope* s)
 {
 	//not sure if this is necessary
 	memset(s, 0, sizeof(Scope));
 
-	// TODO(rswinkle): add elem_free later
-	//
-	// These actually aren't even necessary since cvec allocator macro handles
-	// 0 capacity correctly, but when/if we use elem_free it makes more sense
-	cvec_void(&s->symtab, 0, 8, sizeof(varptr), NULL, NULL);
+	// NOTE(rswinkle):
+	// Can't use elem_free like with tmp because of rm_symtab shenanigans in
+	// ufunc.c for symtab and because of pop() which removes and returns the stack values
+	cvec_varptr(&s->symtab, 0, 8, NULL, NULL);
+	cvec_varptr(&s->stack, 0, 2, NULL, NULL);
 
-	cvec_void(&s->stack, 0, 2, sizeof(varptr), NULL, NULL);
+	cvec_varptr(&s->tmp, 0, 16, free_var2, NULL);
 
 	init_dd(&s->dd);
 	init_dd(&s->args);
-
 }
 
 
@@ -250,55 +256,49 @@ void free_scope(Scope* s)
 	   }
 	*/
 
+	cvec_free_varptr(&s->symtab);
+	cvec_free_varptr(&s->stack);
+	cvec_free_varptr(&s->tmp);
+
 	cvec_free_void(&s->dd);
 	cvec_free_void(&s->args);
 }
 
 void push(Scope* scope, Var* v)
 {
-	varptr t = { v };
-
-	cvec_push_void(&scope->stack, &t);
+	cvec_push_varptr(&scope->stack, &v);
 }
 
 Var* pop(Scope* scope)
 {
-	cvector_void* s = &scope->stack;
+	cvector_varptr* s = &scope->stack;
 
 	if (!s->size) return NULL;
 
-	varptr ret;
-	cvec_pop_void(s, &ret);
+	Var* ret;
+	cvec_pop_varptr(s, &ret);
 
-	return ret.p;
+	return ret;
 }
 
-void clean_table(cvector_void* vec)
+void clean_table(cvector_varptr* vec)
 {
 	for (int i=0; i<vec->size; ++i) {
-		free(*CVEC_GET_VOID(vec, Var*, i));
+		free_var(vec->a[i]);
 	}
-	cvec_free_void(vec);
+	cvec_free_varptr(vec);
 }
 
 void clean_stack(Scope* scope)
 {
-	cvector_void* s = &scope->stack;
-	//Var* v;
-	// could use v if we wanted
-	// cvec_pop_void(s, &v) would work fine
-	// it's a void* parameter and the space is the
-	// same.  Really you could pass the address of anything
-	// as long as it had >= elem_size space.
-	//
-	// I only made varptr for if/when I move to cvec_varptr
+	cvector_varptr* s = &scope->stack;
 
-	varptr r;
+	Var* v;
 	while (s->size) {
-		cvec_pop_void(s, &r);
-		if (!r.p) continue;
+		cvec_pop_varptr(s, &v);
+		if (!v) continue;
 
-		if (mem_claim(r.p)) free_var(r.p);
+		if (mem_claim(v)) free_var(v);
 	}
 }
 
@@ -307,36 +307,54 @@ void clean_stack(Scope* scope)
 void cleanup(Scope* scope)
 {
 	clean_stack(scope);
-	if (scope->tmp) Darray_free(scope->tmp, (Darray_FuncPtr)free_var);
-	scope->tmp = NULL;
+	
+	if (scope->tmp.capacity) {
+		/*
+		if (!scope->tmp.a)
+			printf("%p %p %zu %zu\n", &scope->tmp, scope->tmp.a, scope->tmp.size, scope->tmp.capacity);
+		*/
+
+		cvec_free_varptr(&scope->tmp);
+
+		// NOTE(rswinkle): This is necessary or else *bad things* happen
+		// because whoever wrote davinci didn't actually think about memory
+		// management so things are "cleaned up" in multiple places to be safe
+		//
+		// theoreticaly the capacity check above should prevent any problems
+		// because cvec_free_type sets size = capacity = 0
+		// but for some reason it still seg faults without this.  FTR the old
+		// Darray based version set itself to NULL too
+		scope->tmp.a = NULL;
+	}
 }
 
-// allocate memory in the scope tmp list
 Var* mem_malloc()
 {
+	size_t count    = 0;
+
 	Scope* scope = scope_tos();
-	Var* v       = (Var*)calloc(1, sizeof(Var));
-	Var* top     = NULL;
-	Var* junk    = NULL;
-	int count    = 0;
+	cvector_varptr* vec = &scope->tmp;
 
-	if (scope->tmp == NULL) scope->tmp = Darray_create(0);
+	Var* v       = calloc(1, sizeof(Var));
 
-	/*
-	 * If the top of the tmp scope is null, insert there, instead
-	 * of adding a new one.  This will prevent the temp list from
-	 * gowing indefinitely.
-	 */
-	if ((count = Darray_count(scope->tmp)) > 0) {
-		if (Darray_get(scope->tmp, count - 1, (void**)&top) == 1 && top == NULL) {
-			Darray_replace(scope->tmp, count - 1, v, (void**)&junk);
-			return (v);
+	// If the top of the tmp scope is null, insert there, instead
+	// of adding a new one.  This will prevent the temp list from
+	// growing indefinitely.
+	//
+	// TODO(rswinkle): I don't really grok the above statement.  Why
+	// would there ever be a NULL at the end?
+	
+	if ((count = vec->size) > 0) {
+		if (!vec->a[count-1]) {
+			vec->a[count-1] = v;
+			return v;
 		}
 	}
-
-	Darray_add(scope->tmp, v);
-	return (v);
+	cvec_push_varptr(vec, &v);
+	return v;
 }
+
+
 
 Var* mem_claim_struct(Var* v)
 {
@@ -354,6 +372,7 @@ Var* mem_claim_struct(Var* v)
 	return (v);
 }
 
+
 // claim memory in the scope tmp list, so it doesn't get free'd
 // return NULL if it isn't here.
 Var* mem_claim(Var* ptr)
@@ -363,34 +382,30 @@ Var* mem_claim(Var* ptr)
 	int count;
 	int i;
 
-	if (scope->tmp == NULL) return (NULL);
-	if ((count = Darray_count(scope->tmp)) == 0) return (NULL);
+	cvector_varptr* vec = &scope->tmp;
 
-	for (i = count - 1; i >= 0; i--) {
-		if (Darray_get(scope->tmp, i, (void**)&v) == 1 && v == ptr) {
-			/*
-			** This is it.
-			*/
-			Darray_replace(scope->tmp, i, NULL, (void**)&v);
-			return (mem_claim_struct(v));
+	if ((count = vec->size) == 0) return NULL;
+
+	// TODO(rswinkle): why loop backward?
+	for (i = count - 1; i >= 0; --i) {
+		if (vec->a[i] == ptr) {
+			v = vec->a[i];
+			vec->a[i] = NULL;
+			return mem_claim_struct(v);
 		}
 	}
-	return (NULL);
+
+	return NULL;
 }
 
-// free the scope tmp list
-void mem_free(Scope* scope)
-{
-	if (scope->tmp) Darray_free(scope->tmp, (Darray_FuncPtr)free_var);
-}
 
 void unload_symtab_modules(Scope* scope)
 {
 #ifdef BUILD_MODULE_SUPPORT
-	cvector_void* vec = &scope->symtab;
+	cvector_varptr* vec = &scope->symtab;
 	Var* v;
 	for (int i=0; i<vec->size; ++i) {
-		v = *CVEC_GET_VOID(vec, Var*, i);
+		v = vec->a[i];
 		if (V_TYPE(v) == ID_MODULE) {
 			unload_dv_module(V_NAME(v));
 		}
@@ -408,22 +423,30 @@ void unload_symtab_modules(Scope* scope)
  **/
 void clean_scope(Scope* scope)
 {
-
 	// NOTE(rswirkle): Need to think about whether these checks are necessary
 	// but for now just replicating old logic
 	if (scope->dd.a) {
-		free_var(CVEC_GET_VOID(&scope->dd, dict_item, 0)->value);
-		cvec_free_void(&scope->dd);
+		free_var(scope->dd.a[0].value);
+		cvec_free_dict_item(&scope->dd);
 	}
 
 	if (scope->args.a) {
-		free_var(CVEC_GET_VOID(&scope->args, dict_item, 0)->value);
-		cvec_free_void(&scope->args);
+		free_var(scope->args.a[0].value);
+		cvec_free_dict_item(&scope->args);
 	}
 
 	clean_stack(scope);
-	if (scope->tmp) Darray_free(scope->tmp, (Darray_FuncPtr)free_var);
-	scope->tmp = NULL;
+	cvec_free_varptr(&scope->stack);
+
+	if (scope->tmp.capacity) {
+		/*
+		if (!scope->tmp.a)
+			printf("%p %p %zu %zu\n", &scope->tmp, scope->tmp.a, scope->tmp.size, scope->tmp.capacity);
+			*/
+		cvec_free_varptr(&scope->tmp);
+		// NOTE(rswinkle): again this is necessary or bad things happen ...
+		scope->tmp.a = NULL;
+	}
 
 	/* Clean modules since before cleaning symbol table
 	   since they have a builtin mechansim of removing
@@ -432,8 +455,5 @@ void clean_scope(Scope* scope)
 	   to the module variable in the global symbol table. */
 	unload_symtab_modules(scope);
 
-	// replace with cvec_free with elem_free
 	clean_table(&scope->symtab);
-
-	cvec_free_void(&scope->stack);
 }

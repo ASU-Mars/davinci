@@ -1,15 +1,17 @@
 /*
 ** Formatting: tabwidth=4 shiftwidth=4
 **
-** File: ff_modules.c  - tightly dependent on darray.c::Narray
+** File: ff_modules.c  - tightly dependent on narray.c::Narray
 **
 ** Contains code for loading vanilla modules.
 **
 */
 
+//parser actually pulls in narray which pulls in cvector meh
 #include "cvector.h"
-#include "darray.h"
+#include "narray.h"
 #include "parser.h"
+
 #include <errno.h>
 #include <errno.h>
 #include <stddef.h>
@@ -868,7 +870,6 @@ static int load_dv_module(char* mod_name, char* mod_ver, int offset, dvModule* m
 	}
 	mod->stage = MOD_LOCATED;
 
-	mod->path = strdup(mod->path);
 	if (mod->path == NULL) {
 		parse_error("Mem allocation error, while loading %s.", mod_name);
 		return 0;

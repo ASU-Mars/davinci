@@ -76,9 +76,12 @@ Var* pp_usage(Var*);
 void pp_set_cvar(Var*, Var*); /* set control variable */
 Var* pp_get_cvar(char*);      /* get control variable */
 Var* pp_shell(char* cmd);
-void pp_print_struct(Var* v, int indent, int depth);
+Var* pp_print(Var*);
+void pp_print_var(Var*, char*, int, int, FILE*);
+void pp_print_val(Var* v, int limit, FILE* file);
+void pp_print_struct(Var* v, int indent, int depth, FILE* file);
 int pp_compare(Var* a, Var* b);
-void dump_var(Var* v, int indent, int limit);
+void dump_var(Var* v, int indent, int limit, FILE* file);
 
 #ifdef BUILD_MODULE_SUPPORT
 /* Modules related functions */
@@ -211,7 +214,6 @@ Var* p_rlist(int, Var*, Var*);
 Var* p_llist(int, Var*, Var*);
 
 size_t rpos(size_t, Var*, Var*);
-Var* pp_print(Var*);
 
 /* Calls a davinci function programatically.
    See create_args() for creating and sending args. */
@@ -250,6 +252,11 @@ int dv_format_size(int type);
 const char* dv_format_to_str(int type);
 int dv_str_to_format(const char* str);
 
+int combine_var_formats(Var* v1, Var* v2);
+int combine_formats(int format1, int format2);
+
+//debug use only
+void debug_print_var_type(int type);
 // end misc.c
 
 
@@ -264,7 +271,7 @@ char* get_env_var(char*);
 // helper functions from some ff*.c files into logical groups
 Var* mem_claim(Var*);
 Var* mem_malloc();
-void mem_free(Scope* scope);
+//void mem_free(Scope* scope);
 
 void free_var(Var*);
 void commaize(char*);
@@ -274,7 +281,7 @@ Var* rm_symtab(Var*);
 int LoadSpecprHeader(FILE*, char*, int, char*, Var**);
 int dv_LoadVicarHeader(FILE*, char*, int, char*, Var**);
 
-Var* HasValue(vfuncptr, Var*);
+Var* ff_hasvalue(vfuncptr, Var*);
 Var* ufunc_edit(vfuncptr, Var*);
 
 int fixup_ranges(Var* v, Range* in, Range* out);
@@ -285,9 +292,12 @@ int dv_getline(char** ptr, FILE* fp);
  ** All the internal functions are declared here.
  **/
 
+Var* ff_print(vfuncptr func, Var* arg);
 Var* ff_unpack(vfuncptr, Var*);
 Var* ff_pack(vfuncptr, Var*);
 Var* ff_dfunc(vfuncptr, Var*);
+Var* ff_isnan(vfuncptr, Var*);
+Var* ff_isinf(vfuncptr, Var*);
 Var* ff_pow(vfuncptr, Var*);
 Var* ff_conv(vfuncptr, Var*);
 Var* ff_dim(vfuncptr, Var*);
@@ -474,6 +484,7 @@ int cmp_double_dsc(const void*, const void*);
 int cmp_string_dsc(const void* a, const void* b);
 
 
+
 void log_line(char* str);
 void print_history(int i);
 
@@ -487,7 +498,6 @@ void vax_ieee_r(float* from, float* to);
 Var* varray_subset(Var* v, Range* r);
 
 Var* set_varray(Var* v, Range* r, Var* e);
-void print_text(Var* v, int indent);
 Var* create_struct(Var* v);
 Var* ff_syscall(vfuncptr func, Var* arg);
 
@@ -518,10 +528,17 @@ Var* ff_rtrim(vfuncptr func, Var* arg);
 
 Var* ff_equals(vfuncptr func, Var* arg);
 
+// NOTE(rswinkle): Why are some things extern C but most aren't?
+// Seems like it's either an all or nothing thing and it's completely
+// unecessary for davinci as far as I can tell
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// in ff.c
 Var* newInt(int i);
+Var* new_i64(i64 i);
+Var* new_u64(u64 i);
 Var* newFloat(float f);
 Var* newDouble(double f);
 #ifdef __cplusplus
@@ -618,7 +635,6 @@ char* make_temp_file_path();
 
 int compare_vars(Var* a, Var* b);
 
-extern void pp_print_var(Var*, char*, int, int);
 Var* ff_grassfire(vfuncptr func, Var* arg);
 int math_operable(Var* a, Var* b);
 int compare_struct(Var* a, Var* b);
