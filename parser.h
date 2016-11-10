@@ -28,6 +28,9 @@
 #include <ctype.h>
 #include <signal.h>
 
+#ifndef file_exists
+#define file_exists(filename) (access(filename, F_OK) == 0)
+#endif
 
 #include "system.h"
 
@@ -50,7 +53,7 @@ typedef double (*dfunc)(double);
 typedef double (*ddfunc)(double, double);
 
 
-#define YYSTYPE Vptr
+#define YYSTYPE varptr
 #define YYDEBUG 1
 
 #include "globals.h"

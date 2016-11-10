@@ -39,17 +39,9 @@ static char rcsver[] = "$Id$";
 
 FIELD* MakeField(OBJDESC*, LABEL*);
 int DetermineFieldType(char* type, int size);
-IFORMAT eformat_to_iformat(EFORMAT e);
-void MakeBitFields(OBJDESC* col, FIELD* f, LIST* list);
+void MakeBitFields(OBJDESC* col, FIELD* f, cvector_voidptr* fields);
 FIELD* MakeBitField(OBJDESC* col, FIELD* f);
-EFORMAT ConvertType(char* type);
 
-/*Dummy stub needed for this "borrowed" code*/
-DATA ConvertASCIItoData(char* ascii, int i)
-{
-	DATA d;
-	return (d);
-}
 
 /**
 ** LoadLabel() - Read and decode a PDS label, including individual fields.
@@ -76,7 +68,6 @@ LABEL* LoadLabelFromObjDesc(OBJDESC* tbl, const char* fname)
 	OBJDESC* col;
 	KEYWORD* kw;
 	FIELD* f;
-	LIST* list;
 	LABEL* l;
 	int i;
 	unsigned short scope;
@@ -116,37 +107,29 @@ LABEL* LoadLabelFromObjDesc(OBJDESC* tbl, const char* fname)
 	l->name    = name;
 	l->nrows   = nrows;
 
-	/**
-	 ** get all the column descriptions
-	 **/
+	// get all the column descriptions
+	cvec_init_voidptr(&l->fields, 0, 10, NULL, NULL);
 
-	list  = new_list();
-	i     = 0;
 	scope = ODL_CHILDREN_ONLY;
 	col   = tbl;
 	while ((col = OdlNextObjDesc(col, 0, &scope)) != NULL) {
 		if ((f = MakeField(col, l)) != NULL) {
-			list_add(list, f);
-			i++;
+			cvec_push_voidptr(&l->fields, (void**)&f);
 
-			/**
-			 ** Fake up some additional fields for bit columns.
-			 **/
+			// Fake up some additional fields for bit columns.
 			if (f->eformat == MSB_BIT_FIELD) {
-				MakeBitFields(col, f, list);
+				MakeBitFields(col, f, &l->fields);
 			}
 		}
 	}
 
-	if (i != nfields) {
+	if (l->fields.size != nfields) {
 		fprintf(stderr,
-		        "Wrong number of column definitions in table %s of  %s.  Expected %d, got %d.\n",
-		        OdlGetObjDescClassName(tbl), fname, nfields, i);
+		        "Wrong number of column definitions in table %s of  %s.  Expected %d, got %zu.\n",
+		        OdlGetObjDescClassName(tbl), fname, nfields, l->fields.size);
 	}
 
-	l->fields = list;
-
-	return (l);
+	return l;
 }
 
 /**
@@ -279,7 +262,7 @@ FIELD* MakeField(OBJDESC* col, LABEL* l)
 	return (NULL);
 }
 
-void MakeBitFields(OBJDESC* col, FIELD* f, LIST* list)
+void MakeBitFields(OBJDESC* col, FIELD* f, cvector_voidptr* fields)
 {
 	unsigned short scope;
 	FIELD* b;
@@ -287,7 +270,7 @@ void MakeBitFields(OBJDESC* col, FIELD* f, LIST* list)
 	scope = ODL_CHILDREN_ONLY;
 	while ((col = OdlNextObjDesc(col, 0, &scope)) != NULL) {
 		if ((b = MakeBitField(col, f)) != NULL) {
-			list_add(list, b);
+			cvec_push_voidptr(fields, (void**)&b);
 		}
 	}
 }
@@ -360,8 +343,7 @@ FIELD* MakeBitField(OBJDESC* col, FIELD* f)
 	return (NULL);
 }
 
-IFORMAT
-eformat_to_iformat(EFORMAT e)
+IFORMAT eformat_to_iformat(EFORMAT e)
 {
 	switch (e) {
 	case LSB_INTEGER:
@@ -386,8 +368,7 @@ eformat_to_iformat(EFORMAT e)
 	return INVALID_IFORMAT;
 }
 
-EFORMAT
-ConvertType(char* type)
+EFORMAT ConvertType(char* type)
 {
 	if (!strcasecmp(type, "MSB_INTEGER") || !strcasecmp(type, "MSB_SIGNED_INTEGER") ||
 	    !strcasecmp(type, "SUN_INTEGER") || !strcasecmp(type, "MAC_INTEGER") ||
@@ -426,186 +407,3 @@ ConvertType(char* type)
 	return (INVALID_EFORMAT);
 }
 
-/**
- ** Given a field name, locate it in the list of labels.
- **/
-FIELD* FindField(char* name, LIST* tables)
-{
-	char buf[256];
-	char* p;
-	char* field_name;
-	char* label_name;
-	int i;
-	TABLE* t;
-	LABEL* l;
-	FIELD* f;
-
-	strcpy(buf, name);
-
-	if ((p = strchr(buf, '.')) != NULL) {
-		*p         = '\0';
-		label_name = buf;
-		field_name = p + 1;
-	} else {
-		label_name = NULL;
-		field_name = buf;
-	}
-
-	/**
-	** If this field name includes a dimension, get rid of it
-	**/
-	if ((p = strchr(field_name, '[')) != NULL) {
-		*p = '\0';
-	}
-	for (i = 0; i < tables->number; i++) {
-		t = (tables->ptr)[i];
-		l = t->label;
-		/*
-		** If the user told us what struct the field is in, skip all others
-		*/
-		if (label_name && strcasecmp(label_name, l->name)) continue;
-
-		if ((f = FindFieldInLabel(field_name, l)) != NULL) {
-			return (f);
-		}
-	}
-
-	return (NULL);
-}
-
-FIELD* FindFieldInLabel(char* name, LABEL* l)
-{
-	int i;
-	FIELD** f   = (FIELD**)l->fields->ptr;
-	int nfields = l->fields->number;
-
-	for (i = 0; i < nfields; i++) {
-		if (!strcasecmp(name, f[i]->name)) {
-			return (f[i]);
-		}
-		if (f[i]->alias && !strcasecmp(name, f[i]->alias)) {
-			return (f[i]);
-		}
-	}
-	return (NULL);
-}
-
-/**
- ** Load the header values specific to an individual file
- **/
-
-FRAGMENT* LoadFragment(char* fname, TABLE* table)
-{
-	OBJDESC *ob, *tbl;
-	KEYWORD* kw;
-	LIST *startlist = NULL, *endlist = NULL;
-	FRAGMENT* f;
-	int rows;
-	int offset;
-	struct stat sbuf;
-
-	if (stat(fname, &sbuf) == -1) {
-		parse_error("Unable to find file: %s", fname);
-		return (NULL);
-	}
-
-	ob = OdlParseLabelFile(fname, NULL, ODL_EXPAND_STRUCTURE, 1);
-	if (ob == NULL) {
-		parse_error("Unable to read file: %s", fname);
-		return (NULL);
-	}
-
-	if ((kw = OdlFindKwd(ob, "^TABLE", NULL, 0, ODL_THIS_OBJECT)) != NULL) {
-		offset = atoi(OdlGetKwdValue(kw));
-	} else {
-		parse_error("Unable to find table pointer (^TABLE) in: %s", fname);
-		return (NULL);
-	}
-
-	/* find the first (and only?) table object */
-	if ((tbl = OdlFindObjDesc(ob, "TABLE", NULL, NULL, 0, ODL_TO_END)) == NULL) {
-		parse_error("Unable to find TABLE object: %s", fname);
-		return (NULL);
-	}
-
-	if ((kw = OdlFindKwd(tbl, "ROWS", NULL, 0, ODL_THIS_OBJECT)) != NULL) {
-		rows = atoi(OdlGetKwdValue(kw));
-	} else {
-		parse_error("Unable to find keyword ROWS: %s", fname);
-		return (NULL);
-	}
-
-	if ((kw = GetKey(tbl, "START_KEYS")) != NULL || (kw = GetKey(tbl, "START_PRIMARY_KEY")) != NULL) {
-		int i, j;
-		char** array;
-		DATA* dataval;
-		FIELD** keys = (FIELD**)table->label->keys->ptr;
-
-		i = OdlGetAllKwdValuesArray(kw, &array);
-
-		startlist = new_list();
-		dataval   = calloc(i, sizeof(DATA));
-
-		for (j = 0; j < i; j++) {
-			dataval[j] = ConvertASCIItoData(array[j], keys[j]->iformat);
-			list_add(startlist, &dataval[j]);
-		}
-	} else if ((kw = GetKey(tbl, "START_KEY")) != NULL) {
-		DATA* dataval;
-		FIELD** keys = (FIELD**)table->label->keys->ptr;
-
-		startlist  = new_list();
-		dataval    = calloc(1, sizeof(DATA));
-		dataval[0] = ConvertASCIItoData(OdlGetKwdValue(kw), keys[0]->iformat);
-		list_add(startlist, &dataval[0]);
-	}
-
-	if ((kw = GetKey(tbl, "END_KEYS")) != NULL || (kw = GetKey(tbl, "STOP_PRIMARY_KEY")) != NULL) {
-		int i, j;
-		char** array;
-		DATA* dataval;
-		FIELD** keys = (FIELD**)table->label->keys->ptr;
-
-		i = OdlGetAllKwdValuesArray(kw, &array);
-
-		endlist = new_list();
-		dataval = calloc(i, sizeof(DATA));
-
-		for (j = 0; j < i; j++) {
-			dataval[j] = ConvertASCIItoData(array[j], keys[j]->iformat);
-			list_add(endlist, &dataval[j]);
-		}
-	} else if ((kw = GetKey(tbl, "STOP_KEY")) != NULL) {
-		DATA* dataval;
-		FIELD** keys = (FIELD**)table->label->keys->ptr;
-
-		endlist    = new_list();
-		dataval    = calloc(1, sizeof(DATA));
-		dataval[0] = ConvertASCIItoData(OdlGetKwdValue(kw), keys[0]->iformat);
-		list_add(endlist, &dataval[0]);
-	}
-
-	f = calloc(1, sizeof(FRAGMENT));
-
-	/**
-	 ** This is the all important ^PTR conversion
-	 **/
-	f->offset     = (offset - 1) * table->label->reclen;
-	f->nrows      = rows;
-	f->start_keys = startlist;
-	f->end_keys   = endlist;
-	f->sbuf       = sbuf;
-
-	if (sbuf.st_size != f->offset + f->nrows * table->label->reclen) {
-		parse_error("File is an odd size: %s", fname);
-	}
-
-	return (f);
-}
-
-void FreeFragment(FRAGMENT* f)
-{
-	list_free(f->start_keys);
-	list_free(f->end_keys);
-	free(f);
-}

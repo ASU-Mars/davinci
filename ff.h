@@ -48,9 +48,12 @@ struct _vfuncptr vfunclist[] = {
     {"ceil", ff_dfunc, (void*)ceil, NULL},
     {"abs", ff_dfunc, (void*)fabs, NULL},
     {"round", ff_dfunc, (void*)my_round, NULL},
-    {"my_round", ff_dfunc, (void*)my_round, NULL},
 
     {"pow", ff_pow, (void*)NULL, NULL},
+
+    {"isnan", ff_isnan, (void*)NULL, NULL},
+    {"isinf", ff_isinf, (void*)NULL, NULL},
+
 
     /* format conversion routines.  All just shorthand for ff_conv() */
 
@@ -100,6 +103,7 @@ struct _vfuncptr vfunclist[] = {
     {"remove_struct", ff_remove_struct, NULL, NULL},
     {"insert_struct", ff_insert_struct, NULL, NULL},
     {"get_struct_key", ff_get_struct_key, NULL, NULL},
+    {"get_struct_keys", ff_get_struct_key, NULL, NULL},
 
     /* i/o */
 
@@ -151,6 +155,7 @@ struct _vfuncptr vfunclist[] = {
     {"string", ff_string, NULL, NULL},
 
     {"atoi", ff_atoi, NULL, NULL},
+    {"atol", ff_atoi, NULL, NULL},
     {"atof", ff_atof, NULL, NULL},
     {"atod", ff_atof, NULL, NULL},
     {"delim", ff_delim, NULL, NULL},
@@ -168,12 +173,13 @@ struct _vfuncptr vfunclist[] = {
     {"delete", ff_delete, NULL, NULL},
     {"equals", ff_equals, NULL, NULL},
     {"length", ff_length, NULL, NULL},
-    {"hasvalue", HasValue, NULL, NULL},
-    {"HasValue", HasValue, NULL, NULL},
+    {"hasvalue", ff_hasvalue, NULL, NULL},
+    {"HasValue", ff_hasvalue, NULL, NULL},
 
     {"printf", ff_printf, NULL, NULL},
     {"sprintf", ff_sprintf, NULL, NULL},
     {"fprintf", ff_fprintf, NULL, NULL},
+    {"print", ff_print, NULL, NULL},
 
     {"syscall", ff_syscall, NULL, NULL},
     {"shell", ff_syscall, NULL, NULL},
@@ -205,9 +211,9 @@ struct _vfuncptr vfunclist[] = {
 
     {"moment", ff_moment, NULL, NULL},
     {"moments", ff_moments, NULL, NULL},
-    {"avg", ff_avg2, NULL, NULL},
-    {"stddev", ff_avg2, NULL, NULL},
-    {"sum", ff_avg2, NULL, NULL},
+    {"avg", ff_avg, NULL, NULL},
+    {"stddev", ff_avg, NULL, NULL},
+    {"sum", ff_avg, NULL, NULL},
     {"min", ff_min, NULL, NULL},
     {"max", ff_min, NULL, NULL},
     {"sort", ff_sort, NULL, NULL},
@@ -363,6 +369,7 @@ struct _vfuncptr vfunclist[] = {
     /*  { "blend",             ff_blend,          NULL, NULL }, */
     {"text", ff_create_text, NULL, NULL},
 
+    // not documented or used anywhere
     {"pdshead", ff_pdshead, NULL, NULL}
 
     //{NULL, NULL, NULL, NULL}

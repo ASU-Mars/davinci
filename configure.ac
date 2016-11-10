@@ -52,6 +52,10 @@ dnl Enable Position Independent Code (often required by 64-bit systems)
 export CFLAGS="${CFLAGS} -fPIC"
 export CXXFLAGS="${CXXFLAGS} -fPIC"
 
+dnl Add or remove warnings as wanted
+WFLAGS="-Wall -Wextra -Wno-unused-result -Wno-sign-compare"
+CFLAGS="$CFLAGS $WFLAGS"
+
 dnl Handle user-controllable options.
 
 dnl Enable/disable loadable modules (default = yes).
@@ -269,6 +273,9 @@ fi
 
 AC_CHECK_LIB([curl],[curl_easy_init])
 
+# This was necessary at one point but isn't now
+#AC_CHECK_LIB(lzma,lzma_code)
+
 dnl Check for ImageMagic.
 AC_CHECK_LIB(Magick, GetImageInfo, [have_libmagick=yes],[have_libmagick=no])
 if test "x$have_libmagic" = "xyes"; then
@@ -286,7 +293,7 @@ dnl This is a C++ library; set the language so the test succeeds.
 dnl FIX: not sure why we need both lib and header check..
 dnl Note for FIX above: You may have the library installed on a system, but
 dnl not the header files. davinci already compiled with qmv support will run on
-dnl a system with just the library, but a recompile will fail on deghost.C if you
+dnl a system with just the library, but a recompile will fail on deghost.cpp if you
 dnl do not check for the header file, too.
 
 AC_LANG_PUSH(C++)
@@ -526,8 +533,11 @@ AC_ARG_WITH(examples,
 )
 AM_CONDITIONAL(DV_EXAMPLES, [test "x$DV_EXAMPLES" != "xno"])
 
-dnl We should just delete this whole system.  only mod_foo, an examlpe module uses
-dnl it now.  Everything else uses modules_io
+dnl NOTE(rswinkle): We should just delete this whole system.
+dnl Only moduls/foo, an example module, uses it now.  And this is *never* enabled.
+dnl Everything else uses just ff_modules.c/h which depends on modules_io.c/h
+dnl
+dnl IOW, apifunc.c, apidef.h, api.h and modules/foo/ should be deleted
 AC_ARG_ENABLE(api, AC_HELP_STRING([--enable-api], [enable api support.]))
 if [[ "$enable_api" == "yes" ]]; then
 	AC_DEFINE(INCLUDE_API, 1, [ include api support])

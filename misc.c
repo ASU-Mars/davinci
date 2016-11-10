@@ -75,7 +75,8 @@ char* rtrim(char* s, const char* trim_chars)
 	return s;
 }
 
-// TODO(rswinkle) this leaks everywhere it's used, can we not modify in place?
+// TODO(rswinkle) this leaks almost everywhere it's used because people overwrite the original
+// value. Can we not modify in place?
 // my version is in dvio_hdf.c:make_valid_identifier()
 char* fix_name(const char* input_name)
 {
@@ -84,7 +85,6 @@ char* fix_name(const char* input_name)
 	char* name;
 	int len;
 	int i;
-	int val;
 	const char* trim_chars = "\"\t ";
 
 	name = (char*)calloc(1, strlen(input_name) + 2);
@@ -95,6 +95,7 @@ char* fix_name(const char* input_name)
 
 	len = strlen(name);
 	if (len < 1) {
+		free(name);
 		name = (char*)calloc(strlen(invalid_pfx) + 12, sizeof(char));
 		sprintf(name, "%s_%d", invalid_pfx, ++invalid_id);
 		return name;
@@ -170,8 +171,9 @@ void make_sym(Var* v, int format, char* str)
 	case DV_FLOAT:
 		d = strtod(str, NULL);
 		if (((d > FLT_MAX) || (d < FLT_MIN)) && (d != 0)) {
+			//could realloc here
 			free(V_DATA(v));
-			V_DATA(v)               = calloc(1, NBYTES(DV_DOUBLE));
+			V_DATA(v)               = calloc(1, sizeof(double));
 			V_FORMAT(v)             = DV_DOUBLE;
 			*((double*)(V_DATA(v))) = d;
 		} else {
@@ -185,6 +187,8 @@ void make_sym(Var* v, int format, char* str)
 	}
 }
 
+
+extern avl_tree_t ufuncs_avl;
 void quit(int return_code)
 {
 	char* path = getenv("TMPDIR");
@@ -197,10 +201,20 @@ void quit(int return_code)
 #endif
 	}
 
-	// Could free memory here (like scope_stack etc.) but
+	// NOTE(rswinkle):
+	// Could free all memory here (like scope_stack etc.) but
 	// what's the point?
 	// It's only a memory leak if forget to free something
 	// while running or worse lose access to the pointer entirely.
+	
+	// Only freeing this because it's intrusive and valgrind says everything
+	// in the UFUNC's is "possibly lost".  It would say the same for Narray's
+	// but they also store those pointers directly in the cvector_voidptr
+	free_ufunc_tree();
+
+	while (scope_stack_count()) {
+		scope_pop();
+	}
 
 	// clean up temporary directory
 	rmrf(path);
@@ -796,6 +810,319 @@ int dv_str_to_format(const char* str)
 
 	return format;
 }
+
+
+// NOTE(rswinkle):
+//
+// Return smallest format that can contain the range
+// of the formats of both v1 and v2
+//
+// Currently when combining DV_UINT64 with any signed int type
+// I promote to double even though double doesn't have sufficient
+// precision to represent u64 (or i64 for that matter).
+//
+// double has 15 decimal places of precision and i64 goes to 
+// 9223372036854775807
+//
+// u64 goes to twice that so add one decimal place
+//
+// The alternative when combining u64 with any signed int type is to
+// be like C and just convert the other to u64 and risk losing
+// any negatives.  Of course that would be inconsistent with
+// what we do for combining any smaller unsigned types with a
+// signed type where we just go to the signed type 1 larger
+// than the unsigned for sufficient range.
+//
+// This decision affects all the mathematical and relational operators + cat()
+
+int combine_var_formats(Var* v1, Var* v2)
+{
+	return combine_formats(V_FORMAT(v1), V_FORMAT(v2));
+}
+
+int combine_formats(int format1, int format2)
+{
+	int out_format = format1;
+
+	// I think I made the assumption below that they were
+	// not equal so I left out some cases
+	if (format1 == format2)
+		return out_format;
+
+	switch (format1) {
+	case DV_UINT8:
+		if (format2 == DV_INT8) {
+			out_format = DV_INT16;
+		} else {
+			out_format = format2;
+		}
+		break;
+	case DV_UINT16:
+		switch (format2) {
+		case DV_UINT8:
+			out_format = DV_UINT16;
+			break;
+		case DV_INT8:
+		case DV_INT16:
+			out_format = DV_INT32;
+			break;
+		default:
+			out_format = format2;
+		}
+		break;
+		
+	case DV_UINT32:
+		switch (format2) {
+		case DV_UINT8:
+		case DV_UINT16:
+			out_format = DV_UINT32;
+			break;
+		case DV_INT8:
+		case DV_INT16:
+		case DV_INT32:
+			out_format = DV_INT64;
+			break;
+		case DV_FLOAT:
+			out_format = DV_DOUBLE;
+			break;
+		default:
+			out_format = format2;
+		}
+		break;
+	case DV_UINT64:
+		switch (format2) {
+		case DV_UINT8:
+		case DV_UINT16:
+		case DV_UINT32:
+			out_format = DV_UINT64;
+			break;
+		default:
+			out_format = DV_DOUBLE;
+		}
+		break;
+
+	case DV_INT8:
+		switch (format2) {
+		case DV_UINT8:
+			out_format = DV_INT16;
+			break;
+		case DV_UINT16:
+			out_format = DV_INT32;
+			break;
+		case DV_UINT32:
+			out_format = DV_INT64;
+			break;
+		case DV_UINT64:
+			out_format = DV_DOUBLE;
+			break;
+
+		default:
+			out_format = format2;
+		}
+		break;
+
+	case DV_INT16:
+		switch (format2) {
+		case DV_UINT8:
+			out_format = DV_INT16;
+			break;
+		case DV_UINT16:
+			out_format = DV_INT32;
+			break;
+		case DV_UINT32:
+			out_format = DV_INT64;
+			break;
+		case DV_UINT64:
+			out_format = DV_DOUBLE;
+			break;
+
+		case DV_INT8:
+			out_format = DV_INT16;
+			break;
+
+		default:
+			out_format = format2;
+		}
+		break;
+
+	case DV_INT32:
+		switch (format2) {
+		case DV_UINT8:
+		case DV_UINT16:
+			out_format = DV_INT32;
+			break;
+		case DV_UINT32:
+			out_format = DV_INT64;
+			break;
+		case DV_UINT64:
+			out_format = DV_DOUBLE;
+			break;
+
+		case DV_INT8:
+		case DV_INT16:
+			out_format = DV_INT32;
+			break;
+
+		case DV_FLOAT:
+			out_format = DV_DOUBLE;
+			break;
+
+		default:
+			out_format = format2;
+		}
+		break;
+
+	case DV_INT64:
+		switch (format2) {
+		case DV_UINT8:
+		case DV_UINT16:
+		case DV_UINT32:
+			out_format = DV_INT64;
+			break;
+		case DV_UINT64:
+			out_format = DV_DOUBLE;
+			break;
+
+		case DV_INT8:
+		case DV_INT16:
+		case DV_INT32:
+			out_format = DV_INT64;
+			break;
+
+		case DV_FLOAT:
+			out_format = DV_DOUBLE;
+			break;
+
+		default:
+			out_format = format2;
+		}
+		break;
+
+	case DV_FLOAT:
+		switch (format2) {
+		case DV_UINT32:
+		case DV_UINT64:
+		case DV_INT32:
+		case DV_INT64:
+		case DV_DOUBLE:
+			out_format = DV_DOUBLE;
+			break;
+		default:
+			out_format = DV_FLOAT;
+			break;
+		}
+		break;
+
+	case DV_DOUBLE:
+		out_format = DV_DOUBLE;
+		break;
+	}
+
+	return out_format;
+
+}
+
+
+//NOTE(rswinkle): could put this anywhere that includes parser_types.h
+
+CVEC_NEW_DEFS2(varptr, RESIZE)
+
+
+
+void debug_print_var_type(int type)
+{
+static char* enum_strings[] = {
+	"ID_NONE  = 0, /* a non value */",
+	"ID_ERROR = 99,",
+	"ID_BASE  = 100, /* in case of conflicts */",
+	"ID_UNK,         /* Unknown type - also used as a generic type */",
+	"ID_STRING,      /* NULL terminated character string */",
+	"ID_KEYWORD,     /* keyword argument */",
+	"ID_VAL,         /* everything with dim != 0 */",
+	"ID_STRUCT,      /* Structure */",
+	"ID_TEXT,        /*1-D Array of Strings*/",
+
+	"ID_IVAL, /* Integer value */",
+	"ID_RVAL, /* real value */",
+	"ID_ID,   /* Identifier */",
+
+	"ID_LIST,   ",
+	"ID_IF"
+	"ID_ELSE,   ",
+	"ID_WHILE,  ",
+	"ID_CONT,   ",
+	"ID_BREAK,  ",
+	"ID_RETURN, ",
+
+	"ID_RANGES, /* list of ranges */",
+	"ID_RSTEP,  /* list of ranges */",
+	"ID_RANGE,  /* single range value */",
+	"ID_SET,    /* assignment expression */",
+	"ID_OR",
+	"ID_AND",
+	"ID_EQ",
+	"ID_NE",
+	"ID_LT",
+	"ID_GT",
+	"ID_LE",
+	"ID_GE",
+	"ID_ADD",
+	"ID_SUB",
+	"ID_MULT",
+	"ID_DIV",
+	"ID_MOD",
+	"ID_UMINUS",
+	"ID_LSHIFT",
+	"ID_RSHIFT",
+	"ID_FUNCT",
+	"ID_ARRAY,  /* application of ranges to array */",
+
+	// I think these descriptions are swapped based on evaluate()
+	"ID_ARG,    /* list of arguments */",
+	"ID_ARGS,   /* single argument */",
+
+	"ID_FOR",
+	"ID_FOREACH",
+	"ID_EACH",
+
+	"ID_ARGV,    /* $VALUE argument. Evalue at run */",
+
+	"ID_INC,    /* increment value */",
+	"ID_DEC,    /* decrement value */",
+	"ID_INCSET, /* increment value */",
+	"ID_DECSET, /* decrement value */",
+	"ID_MULSET, /* *= value */",
+	"ID_DIVSET, /* /= value */",
+
+	"ID_POW,   /* exponent */",
+	"ID_CAT,   /* concatenate */",
+	"ID_ENUM,  /* enumerated argument, not parsed */",
+	"ID_DECL,  /* Declaration */",
+	"ID_WHERE, /* Where */",
+	"ID_DEREF, /* Structure dereference */",
+
+	"ID_CONSTRUCT,   /* Structure constructor */",
+	"ID_DECONSTRUCT, /* Structure deconstructor */",
+
+	"ONE_AXIS, /* argument options */",
+	"ANY_AXIS, /* argument options */",
+
+	"ID_LINE",
+
+	"ID_MODULE,   /* davinci module variable ID */",
+	"ID_FUNCTION, /* davinci module function variable ID */",
+	"ID_PARALLEL, /* parallelization */",
+	"ID_VARARGS,  /* varargs arguments */",
+
+	"ID_FPTR /* a function pointer */",
+	};
+
+	if (type > 0)
+		type -= ID_ERROR-1;
+
+	puts(enum_strings[type]);
+}
+
 
 
 

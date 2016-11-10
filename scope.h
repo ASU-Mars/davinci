@@ -4,31 +4,30 @@
 #include "cvector.h"
 
 
-typedef struct varptr {
-	Var* p;
-} varptr;
-
+// TODO(rswinkle): Think of a better, shorter name.  I'd call
+// it dict but it's only a single element not an entire dictionary.
 typedef struct dict_item {
 	char* name;
 	Var* value;
 } dict_item;
 
+CVEC_NEW_DECLS2(dict_item)
 
 typedef struct Scope {
 
 	// a[0].value holds the var representation of argc
-	cvector_void dd;   // named variable data dictionary
-	cvector_void args; // number arguments data dictionary
+	cvector_dict_item dd;   // named variable data dictionary
+	cvector_dict_item args; // number arguments data dictionary
 
 
 
 	// symbol table.  This actually holds the memory for values created
 	// in this scope. Child scopes will point to these vars
-	cvector_void symtab; // local symbol table
+	cvector_varptr symtab; // local symbol table
 
-	Darray* tmp;         // tmp memory list
+	cvector_varptr tmp;         // tmp memory list
 
-	cvector_void stack;  // local stack
+	cvector_varptr stack;  // local stack
 
 	UFUNC* ufunc;        // function pointer
 

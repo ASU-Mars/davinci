@@ -4,7 +4,7 @@
 #include "parser.h"
 
 void commaize(char*);
-void pp_print_var(Var* v, char* name, int indent, int depth);
+void pp_print_var(Var* v, char* name, int indent, int depth, FILE* file);
 
 extern Var* textarray_subset(Var*, Var*);
 extern Var* string_subset(Var*, Var*);
@@ -30,7 +30,6 @@ Var* V_DUP(Var* v)
 
 	switch (V_TYPE(v)) {
 	case ID_VAL:
-		memcpy(V_SYM(r), V_SYM(v), sizeof(Sym));
 		dsize                      = V_DSIZE(v) * NBYTES(V_FORMAT(v));
 		V_SYM(r)->data             = memcpy(malloc(dsize), V_SYM(v)->data, dsize);
 		if (V_TITLE(v)) V_TITLE(r) = strdup(V_TITLE(v));
@@ -75,7 +74,7 @@ Var* pp_print(Var* v)
 	s = eval(v);
 	if (s != NULL) {
 		v = s;
-		pp_print_var(v, NULL, 0, DEPTH);
+		pp_print_var(v, NULL, 0, DEPTH, NULL);
 	} else {
 		parse_error("Unable to find variable: %s", V_NAME(v));
 	}
@@ -83,7 +82,7 @@ Var* pp_print(Var* v)
 	return (NULL);
 }
 
-void pp_print_struct(Var* v, int indent, int depth)
+void pp_print_struct(Var* v, int indent, int depth, FILE* file)
 {
 	int i, count;
 	Var* s;
@@ -91,11 +90,12 @@ void pp_print_struct(Var* v, int indent, int depth)
 
 	if (v == NULL) return;
 	if (VERBOSE == 0) return;
+	if (!file) file = (FILE*)stdout;
 
 	/*
-	  //  if (V_NAME(v)) printf("%s", V_NAME(v));
+	  //  if (V_NAME(v)) fprintf(file, "%s", V_NAME(v));
 	  //  if (indent == 0) {
-	  //      printf(": struct\n");
+	  //      fprintf(file, ": struct\n");
 	  //  }
 	*/
 
@@ -106,56 +106,68 @@ void pp_print_struct(Var* v, int indent, int depth)
 	count = get_struct_count(v);
 	for (i = 0; i < count; i++) {
 		get_struct_element(v, i, &name, &s);
-		pp_print_var(s, name, indent, depth);
+		pp_print_var(s, name, indent, depth, file);
 	}
 }
 
-void dump_var(Var* v, int indent, int limit)
+void pp_print_val(Var* v, int limit, FILE* file)
+{
+	size_t x,y,z,i,j,k,c;
+	if (!file) file = (FILE*)stdout;
+
+	x = GetSamples(V_SIZE(v), V_ORG(v));
+	y = GetLines(V_SIZE(v), V_ORG(v));
+	z = GetBands(V_SIZE(v), V_ORG(v));
+	if (limit == 0 || V_DSIZE(v) <= limit) {
+		for (k = 0; k < z; k++) {
+			if (k > 0) fputc('\n', file);
+			for (j = 0; j < y; j++) {
+				if (j > 0 || k > 0) fputc('\n', file);
+				for (i = 0; i < x; i++) {
+					if (i > 0) fputc('\t', file);
+
+					c = cpos(i, j, k, v);
+					switch (V_FORMAT(v)) {
+					case DV_UINT8: fprintf(file, "%"PRIu8, ((u8*)V_DATA(v))[c]); break;
+					case DV_UINT16: fprintf(file, "%"PRIu16, ((u16*)V_DATA(v))[c]); break;
+					case DV_UINT32: fprintf(file, "%"PRIu32, ((u32*)V_DATA(v))[c]); break;
+					case DV_UINT64: fprintf(file, "%"PRIu64, ((u64*)V_DATA(v))[c]); break;
+
+					case DV_INT8: fprintf(file, "%"PRId8, ((i8*)V_DATA(v))[c]); break;
+					case DV_INT16: fprintf(file, "%"PRId16, ((i16*)V_DATA(v))[c]); break;
+					case DV_INT32: fprintf(file, "%"PRId32, ((i32*)V_DATA(v))[c]); break;
+					case DV_INT64: fprintf(file, "%"PRId64, ((i64*)V_DATA(v))[c]); break;
+
+					case DV_FLOAT: fprintf(file, "%#.*g", SCALE, ((float*)V_DATA(v))[c]); break;
+					case DV_DOUBLE: fprintf(file, "%#.*g", SCALE, ((double*)V_DATA(v))[c]); break;
+					}
+				}
+			}
+		}
+	}
+}
+
+void dump_var(Var* v, int indent, int limit, FILE* file)
 {
 	size_t i, j, k;
 	size_t c;
 	size_t x, y, z;
 	int row;
 
+	if (!file) file = (FILE*)stdout;
+
 	switch (V_TYPE(v)) {
 	case ID_VAL:
-		x = GetSamples(V_SIZE(v), V_ORG(v));
-		y = GetLines(V_SIZE(v), V_ORG(v));
-		z = GetBands(V_SIZE(v), V_ORG(v));
-		if (limit == 0 || (limit && V_DSIZE(v) <= limit)) {
-			for (k = 0; k < z; k++) {
-				for (j = 0; j < y; j++) {
-					for (i = 0; i < x; i++) {
-						c = cpos(i, j, k, v);
-						switch (V_FORMAT(v)) {
-						// TODO(rswinkle) test on 32 bit
-						case DV_UINT8: printf("%"PRIu8"\t", ((u8*)V_DATA(v))[c]); break;
-						case DV_UINT16: printf("%"PRIu16"\t", ((u16*)V_DATA(v))[c]); break;
-						case DV_UINT32: printf("%"PRIu32"\t", ((u32*)V_DATA(v))[c]); break;
-						case DV_UINT64: printf("%"PRIu64"\t", ((u64*)V_DATA(v))[c]); break;
-
-						case DV_INT8: printf("%"PRId8"\t", ((i8*)V_DATA(v))[c]); break;
-						case DV_INT16: printf("%"PRId16"\t", ((i16*)V_DATA(v))[c]); break;
-						case DV_INT32: printf("%"PRId32"\t", ((i32*)V_DATA(v))[c]); break;
-						case DV_INT64: printf("%"PRId64"\t", ((i64*)V_DATA(v))[c]); break;
-
-						case DV_FLOAT: printf("%#.*g\t", SCALE, ((float*)V_DATA(v))[c]); break;
-						case DV_DOUBLE: printf("%#.*g\t", SCALE, ((double*)V_DATA(v))[c]); break;
-						}
-					}
-					putchar('\n');
-				}
-				if (z > 1) putchar('\n');
-			}
-		}
+		pp_print_val(v, limit, file);
+		fputc('\n', file);
 		break;
 
 	case ID_STRUCT:
 		if (limit > 0) {
-			printf("struct, %d elements\n", get_struct_count(v));
-			pp_print_struct(v, indent, limit - 1);
+			fprintf(file, "struct, %d elements\n", get_struct_count(v));
+			pp_print_struct(v, indent, limit - 1, NULL);
 		} else {
-			printf("struct, %d elements...\n", get_struct_count(v));
+			fprintf(file, "struct, %d elements...\n", get_struct_count(v));
 		}
 		break;
 
@@ -163,13 +175,13 @@ void dump_var(Var* v, int indent, int limit)
 		row            = V_TEXT(v).Row;
 		if (limit) row = min(limit, row);
 		for (i = 0; i < row; i++) {
-			printf("%*s%zu: %s\n", indent, "", (i + 1), V_TEXT(v).text[i]);
+			fprintf(file, "%*s%zu: %s\n", indent, "", (i + 1), V_TEXT(v).text[i]);
 		}
 		break;
 	}
 }
 
-void pp_print_var(Var* v, char* name, int indent, int depth)
+void pp_print_var(Var* v, char* name, int indent, int depth, FILE* file)
 {
 	char bytes[64];
 	size_t x, y, z;
@@ -178,56 +190,47 @@ void pp_print_var(Var* v, char* name, int indent, int depth)
 	if (name == NULL) {
 		name = (char*)"";
 	}
-	if (indent || npassed) printf("%*s%s: ", indent, "", name);
+
+	if (!file) file = stdout;
+	if (indent || npassed) fprintf(file, "%*s%s: ", indent, "", name);
 
 	switch (V_TYPE(v)) {
-	case ID_STRING: printf("\"%s\"\n", V_STRING(v)); break;
+	case ID_STRING: fprintf(file, "\"%s\"\n", V_STRING(v)); break;
 	case ID_VAL:
 		if (V_DSIZE(v) == 1) {
-			dump_var(v, indent, 1);
+			dump_var(v, indent, 1, file);
 		} else {
 			x = GetSamples(V_SIZE(v), V_ORG(v));
 			y = GetLines(V_SIZE(v), V_ORG(v));
 			z = GetBands(V_SIZE(v), V_ORG(v));
 			sprintf(bytes, "%zu", NBYTES(V_FORMAT(v)) * V_DSIZE(v));
 			commaize(bytes);
-			printf("%zux%zux%zu array of %s, %s format [%s bytes]\n", x, y, z, Format2Str(V_FORMAT(v)),
+			fprintf(file, "%zux%zux%zu array of %s, %s format [%s bytes]\n", x, y, z, Format2Str(V_FORMAT(v)),
 			       Org2Str(V_ORG(v)), bytes);
 			if (indent == 0) {
-				dump_var(v, 0, 100);
+				dump_var(v, 0, 100, file);
 			}
 		}
 		break;
 	case ID_STRUCT:
 		if (depth > 0) {
-			printf("struct, %d elements\n", get_struct_count(v));
-			pp_print_struct(v, indent, depth - 1);
+			fprintf(file, "struct, %d elements\n", get_struct_count(v));
+			pp_print_struct(v, indent, depth - 1, file);
 		} else {
-			printf("struct, %d elements...\n", get_struct_count(v));
+			fprintf(file, "struct, %d elements...\n", get_struct_count(v));
 		}
 		break;
 
 	case ID_TEXT: /*Added: Thu Mar  2 16:52:39 MST 2000*/
-		printf("Text Buffer with %d lines of text\n", V_TEXT(v).Row);
-		dump_var(v, indent + 4, 10);
+		fprintf(file, "Text Buffer with %d lines of text\n", V_TEXT(v).Row);
+		dump_var(v, indent + 4, 10, file);
 		break;
 
+	// TODO(rswinkle): pp_print_module_var ends up printing to stderr via parse_error...
+	// Should I propagate file through?  everything else defaults to stdout
 #ifdef BUILD_MODULE_SUPPORT
 	case ID_MODULE: pp_print_module_var(v); break;
 #endif /* BUILD_MODULE_SUPPORT */
-	}
-}
-
-void print_text(Var* v, int indent)
-{
-	int i, row;
-
-	row = min(10, V_TEXT(v).Row);
-
-	printf("%*sText Buffer with %d lines of text\n", indent, "", V_TEXT(v).Row);
-
-	for (i = 0; i < row; i++) {
-		printf("%*s%d: \t%s\n", indent, "", (i + 1), V_TEXT(v).text[i]);
 	}
 }
 
@@ -244,7 +247,17 @@ Var* pp_set_var(Var* id, Var* range, Var* exp)
 	 ** If exp is named, it is a simple variable substitution.
 	 ** If its not named, we can use its memory directly.
 	 **/
-	if (exp == NULL) return (NULL);
+	if (exp == NULL) {
+		// NOTE(rswinkle):
+		// "set" id to NULL by removing it from the symtable
+		// which makes the behavior consistent with the case
+		// where the symbol didn't already exist.
+		if (V_NAME(id)) {
+			rm_sym(V_NAME(id));
+		}
+		return NULL;
+	}
+
 	if (range != NULL) {
 		/**
 		 ** The user has requested an array replacement.
@@ -304,6 +317,11 @@ Var* pp_set_var(Var* id, Var* range, Var* exp)
 	}
 
 	/* looks like structs might not have names, so skip this for them */
+
+	// NOTE(rswinkle): I don't think id will ever not have a name.  This
+	// function parses statements of the form id = exp.  exp could be a function
+	// call or expression, and thus not have a name but how could id not be
+	// an actual identifier, ie a name?
 	if (V_NAME(id)) {
 		V_NAME(exp) = strdup(V_NAME(id));
 
@@ -550,20 +568,32 @@ Var* pp_mk_range(Var* r1, Var* r2)
 	r2 = eval(r2);
 
 	if (r1) {
+		/*
+		 * NOTE(rswinkle): We can put these checks back in, if
+		 * we want, if we change the format promotion used in
+		 * pp_math to not promote uint64 + signed int type
+		 * to double.  As it is, this is a scripting language
+		 * and does it hurt to allow floating point values
+		 * which are automatically truncated converting to u64?
+		 *
+		 *
 		format = V_FORMAT(r1);
 		if (format < DV_UINT8 || format > DV_INT64) {
 			parse_error("(r1) Invalid range value.");
 			return (NULL);
 		}
+		*/
 		v1 = extract_u64(r1, 0);
 	}
 
 	if (r2) {
+		/*
 		format = V_FORMAT(r2);
 		if (format < DV_UINT8 || format > DV_INT64) {
 			parse_error("(r2) Invalid range value");
 			return (NULL);
 		}
+		*/
 		v2 = extract_u64(r2, 0);
 	}
 
@@ -598,11 +628,14 @@ Var* pp_mk_rstep(Var* r1, Var* r2)
 	}
 
 	if (r2) {
+		/*
+ 		 * NOTE(rswinkle): see comment in pp_mk_range()
 		format = V_FORMAT(r2);
 		if (format < DV_UINT8 || format > DV_INT64) {
 			parse_error("(r2) Invalid range value");
 			return (NULL);
 		}
+		*/
 		v1 = extract_u64(r2, 0);
 	}
 

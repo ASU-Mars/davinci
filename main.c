@@ -44,8 +44,7 @@ int usage(char* prog);
 extern int num_internal_funcs;
 extern struct _vfuncptr vfunclist[];
 
-extern UFUNC** ufunc_list;
-extern int nufunc;
+extern avl_tree_t ufuncs_avl;
 
 ////////////////////
 
@@ -116,7 +115,9 @@ void dv_sighandler(int data)
 	case (SIGINT):
 		signal(SIGINT, SIG_IGN);
 		while ((scope = scope_tos()) != global_scope()) {
+			//NOTE(rswinkle): This does nothing!
 			dd_unput_argv(scope);
+
 			scope_pop();
 		}
 
@@ -139,7 +140,6 @@ int main(int ac, char** av)
 	int quick = 0;
 	int i, j, k, flag = 0;
 	char* logfile = NULL;
-	int iflag     = 0;
 	char* p;
 	int history = 1;
 
@@ -169,6 +169,7 @@ int main(int ac, char** av)
 	// TODO(rswinkle): put all this in a general "init" function
 	init_input_stack();
 	init_scope_stack();
+	init_ufunc_tree();
 
 	Scope scope;
 	init_scope(&scope);
@@ -177,6 +178,9 @@ int main(int ac, char** av)
 
 	//sort internal function list to speed up tab completion matching
 	//and present them in alphabetical order when double TABing for multiple matches
+	//also lets us do bsearch for function dispatch in ff.c:V_func()
+	//
+	//note cmp_string only works because name is the first member of _vfuncptr
 	qsort(vfunclist, num_internal_funcs, sizeof(struct _vfuncptr), cmp_string);
 
 
@@ -304,12 +308,6 @@ int main(int ac, char** av)
 					}
 					break;
 				}
-				case 'i': {
-					/**
-					 **/
-					iflag = 1;
-					break;
-				}
 				case 'q': {
 					quick = 1;
 					break;
@@ -354,20 +352,9 @@ int main(int ac, char** av)
 #ifdef HAVE_LIBREADLINE
 		/* JAS FIX */
 
-		// TODO(rswinkle): figure out how to get special_prefixes to work and
-		// whether it's even worth it
-		// There are too many configuration variables poorly documented/explained
-		// http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#SEC47
-		//static const char* wordbreakers = ".";
-		//rl_special_prefixes = wordbreakers;
-		
-
-		//static const char wordbreakers = " \t\n\"\\'`@$><=;|&{(";
-		//adding the '.'
-		static const char* wordbreakers = ". \t\n\"\\'`@$><=;|&{(";
-		rl_basic_word_break_characters = wordbreakers;
-
 		rl_attempted_completion_function = dv_complete_func;
+
+		//to turn off tab completion (except filename completion which is free)
 		//rl_attempted_completion_function = dv_null_func;
 #endif
 	}
@@ -616,9 +603,6 @@ void parse_buffer(char* buf)
 
 	curnode = NULL;
 
-	// DEBUG(rswinkle)
-	//printf("start scope_count = %d\n", scope_stack_count());
-
 	while ((i = yylex()) != 0) {
 		/*
 		** if this is a function definition, do no further parsing yet.
@@ -796,16 +780,19 @@ void init_history(char* fname)
 
 #ifdef HAVE_LIBREADLINE
 
+char* member_generator(const char* text, int state);
+
 // Generator function for command completion.  STATE lets us know whether
 // to start from scratch; without any state (i.e. STATE == 0), then we
 // start at the top of the list.
 char* command_generator(const char* text, int state)
 {
-	static int list_index, len, search_state;
+	static int list_index, len, search_state, mem_state;
+	static avl_node_t* tree_node;
 
 	Scope* scope = global_scope();
 
-	cvector_void* vec = &scope->symtab;
+	cvector_varptr* vec = &scope->symtab;
 	Var* v;
 
 	// If this is a new word to complete, initialize now.  This includes
@@ -815,18 +802,24 @@ char* command_generator(const char* text, int state)
 		len = strlen(text);
 		search_state = 0;
 		list_index = 0;
+		mem_state = 0;
+		tree_node = NULL;
 	}
 
-	int i;
+	int i, cmp_result;
 
 	// Return the next name which partially matches from the command list.
 	
 	// search builtin functions
 	if (search_state == 0) {
 		for (i=list_index; i<num_internal_funcs; ++i) {
-			if (strncmp(vfunclist[i].name, text, len) == 0) {
+			cmp_result = strncmp(vfunclist[i].name, text, len);
+			if (cmp_result == 0) {
 				list_index = i+1;
 				return strdup(vfunclist[i].name);
+			} else if (cmp_result > 0) {
+				// since they're alphabetical if name > text we're done
+				break;
 			}
 		}
 		search_state++;
@@ -835,11 +828,23 @@ char* command_generator(const char* text, int state)
 
 	//search user defined functions
 	if (search_state == 1) {
-		for (i = list_index; i < nufunc; ++i) {
-			if (strncmp(ufunc_list[i]->name, text, len) == 0) {
-				list_index = i+1;
-				return strdup(ufunc_list[i]->name);
-			}
+		if (!list_index) {
+			tree_node = avl_head(&ufuncs_avl);
+			list_index = 1;
+		}
+		while (tree_node) {
+			UFUNC* u = avl_ref(tree_node, UFUNC, node);
+			cmp_result = strncmp(u->name, text, len);
+
+			//since we're going through the tree in alphabetical order
+			//if u->name > text we're past any possible matches
+			if (cmp_result > 0)
+				break;
+
+			tree_node = avl_next(tree_node);
+
+			if (cmp_result == 0)
+				return strdup(u->name);
 		}
 		search_state++;
 		list_index = 0;
@@ -847,14 +852,34 @@ char* command_generator(const char* text, int state)
 
 	//global variables
 	if (search_state == 2) {
-		for (i=0; i<vec->size; ++i) {
-			if (i < list_index)
-				continue;
+		for (i=list_index; i<vec->size; ++i) {
+			v = vec->a[i];
 
-			v = *CVEC_GET_VOID(vec, Var*, i);
-			if (V_NAME(v) != NULL && !strncmp(V_NAME(v), text, len)) {
-				list_index = i+1;
-				return strdup(V_NAME(v));
+			if (V_NAME(v) != NULL) {
+				int n_len = strlen(V_NAME(v));
+
+				if (!strncmp(V_NAME(v), text, len)) {
+					list_index = i+1;
+					return strdup(V_NAME(v));
+				}
+
+				if (!strncmp(V_NAME(v), text, strlen(V_NAME(v))) && text[n_len] == '.') {
+					//
+					// NOTE(rswinkle): I'm manually doing what rl_completion_matches does
+					// here.  I used to try to logic it out in dv_complete_func and call
+					// rl_completion_matches with member_generator directly but it wasn't
+					// ideal and even though this duplicates some work (refinding the top level
+					// structure) I think it's better
+					char* ret = member_generator(text, mem_state);
+					mem_state = 1;
+					
+					if (!ret) {
+						list_index = i+1;
+						mem_state = 0;
+						continue;
+					}
+					return ret;
+				}
 			}
 		}
 	}
@@ -873,17 +898,12 @@ char* member_generator(const char* text, int state)
 	char* name;
 
 	Scope* scope = global_scope();
-	cvector_void* vec = &scope->symtab;
+	cvector_varptr* vec = &scope->symtab;
 
 	char* word = NULL;
 
-	//text is actually empty cause it breaks on '.' and we
-	//need the structure names so we work on the whole line buf
-	//word = text;
-	word = rl_line_buffer;
+	word = text;
 
-	//return NULL;
-	//printf("word = \"%s\"\n", word);
 	char* tmp;
 	int nlen;
 	int i, n_memb;
@@ -902,7 +922,7 @@ char* member_generator(const char* text, int state)
 		dot = tmp;
 
 		for (i=0; i<vec->size; ++i) {
-			v = *CVEC_GET_VOID(vec, Var*, i);
+			v = vec->a[i];
 			if (V_TYPE(v) != ID_STRUCT)
 				continue;
 
@@ -934,12 +954,12 @@ char* member_generator(const char* text, int state)
 		if (name && !strncmp(name, &dot[1], nlen)) {
 
 			list_index = j+1;
-			/*
+
+			//comment out these 4 lines if '.' is a breaking character
 			result = malloc(dot-word+1 + strlen(name)+1);
 			memcpy(result, word, dot-word+1);
 			strcpy(&result[dot-word+1], name);
 			return result;
-			*/
 
 			return strdup(name);
 		}
@@ -948,12 +968,14 @@ char* member_generator(const char* text, int state)
 	return NULL;
 }
 
+/*
+ * NOTE(rswinkle): Not currently used
 char* global_var_generator(const char* text, int state)
 {
 	static int list_index, len;
 
 	Scope* scope = global_scope();
-	cvector_void* vec = &scope->symtab;
+	cvector_varptr* vec = &scope->symtab;
 	Var* v;
 
 	if (!state) {
@@ -966,7 +988,7 @@ char* global_var_generator(const char* text, int state)
 		if (i < list_index)
 			continue;
 
-		v = *CVEC_GET_VOID(vec, Var*, i);
+		v = vec->a[i];
 		if (V_NAME(v) != NULL && !strncmp(V_NAME(v), text, len)) {
 			list_index = i+1;
 			return strdup(V_NAME(v));
@@ -974,6 +996,7 @@ char* global_var_generator(const char* text, int state)
 	}
 	return NULL;
 }
+*/
 
 
 
@@ -989,34 +1012,11 @@ char** dv_complete_func(const char* text, int start, int end)
 
 	rl_completion_append_character = '\0';
 
-	//static const char *default_filename_quote_chars = " \t\n\\\"'@<>=;|&()#$`?*[!:{~";	/*}*/
-	//rl_filename_quote_characters = default_filename_quote_chars;
-
 	static const char* qb = "\'\"";
-	//rl_completer_word_break_characters = wordbreakers;
 
-
-	// If this word is at the start of the line, then it is a function name
-	// to complete.  Otherwise it is the name of a file in the current
-	// directory.
-	//printf("\"%s\" %d %d %c\n", rl_line_buffer, start, end, rl_line_buffer[start]);
-	if (start == 0) {
+	if (start == 0 || (rl_line_buffer[start-1] != qb[0] && rl_line_buffer[start-1] != qb[1])) {
 		matches = rl_completion_matches(text, command_generator);
-	} else {
-		if (rl_line_buffer[start-1] == '.') {
-			matches = rl_completion_matches(text, member_generator);
-			rl_attempted_completion_over = 1;
-
-		// I'm sure there is a better/more correct way to do this but I haven't
-		// figured it out yet
-		} else if (rl_line_buffer[start-1] != qb[0] && rl_line_buffer[start-1] != qb[1]) {
-		//} else if (!rl_completion_quote_character) {
-			matches = rl_completion_matches(text, command_generator);
-		} else {
-			//rl_completer_word_break_characters = qb;
-		}
 	}
-
 
 	return matches;
 }

@@ -401,7 +401,7 @@ static herr_t group_iter(hid_t parent, const char* name, const H5L_info_t* info,
 			}
 			//  dsize = H5Sget_simple_extent_npoints(dataspace);
 			dsize   = H5Tget_size(datatype);
-			databuf = (unsigned char*)calloc(dsize, sizeof(char));
+			databuf = calloc(dsize+1, sizeof(char));
 			H5Dread(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, databuf);
 			if (Lines <= 1) {
 				V_STRING(v) = databuf;
@@ -430,6 +430,7 @@ static herr_t group_iter(hid_t parent, const char* name, const H5L_info_t* info,
 						nm++;
 					}
 				}
+				free(databuf);
 			}
 
 			H5Sclose(dataspace);
@@ -455,7 +456,7 @@ static herr_t group_iter(hid_t parent, const char* name, const H5L_info_t* info,
 
 	if (VERBOSE > 2) {
 		if (v)
-			pp_print_var(v, V_NAME(v), 0, 0);
+			pp_print_var(v, V_NAME(v), 0, 0, NULL);
 		else
 			printf("Var v = NULL\n");
 	}
@@ -504,6 +505,11 @@ Var* load_hdf5(hid_t parent, callback_data* cb_data)
 
 	// NOTE(rswinkle) I think this is overkill.  Picking a reasonable start size (4-8) is fine
 	H5Literate(parent, H5_INDEX_NAME, H5_ITER_NATIVE, NULL, count_group, &count);
+
+	//Theoretically calling H5Literate something like this (and adjusted down below too) would
+	//preserve struct member ordering when loading in an hdf written by davinci.  Unfortunately
+	//it doesn't work at all, throws errors including "no creation order index to query"
+	//H5Literate(parent, H5_INDEX_CRT_ORDER, H5_ITER_INC, NULL, count_group, &count);
 
 	if (count < 0) {
 		parse_error("Group count < 0");

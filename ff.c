@@ -13,8 +13,6 @@ Var* eval_buffer(char* buf);
 
 int num_internal_funcs = sizeof(vfunclist)/sizeof(struct _vfuncptr);
 
-
-
 /**
  ** V_func - find and call named function
  **
@@ -24,7 +22,7 @@ int num_internal_funcs = sizeof(vfunclist)/sizeof(struct _vfuncptr);
 
 Var* V_func(const char* name, Var* arg)
 {
-	vfuncptr f;
+	vfuncptr f = NULL;
 	UFUNC *uf, *locate_ufunc(const char *);
 #ifdef INCLUDE_API
 	APIDEFS* api;
@@ -40,37 +38,36 @@ Var* V_func(const char* name, Var* arg)
 	  }
 	*/
 
-	/*
-	** Find and call the named function or its handler
-	*/
-	for (int i=0; i<num_internal_funcs; ++i) {
-		f = &vfunclist[i];
-		if (!strcmp(f->name, name)) {
-			return (f->fptr(f, arg));
-		}
+	// Find and call the named function or its handler
+	//
+	// since vfunclist is now sorted by name (see main.c) we
+	// can now use bsearch which with > 250 built in functions
+	// should be much faster than a linear search.
+	//
+	// We can use &name and cmp_string because name is the first
+	// member of _vfuncptr
+	//
+	f = bsearch(&name, vfunclist, num_internal_funcs,
+	            sizeof(struct _vfuncptr), cmp_string);
+	if (f) {
+		return (f->fptr(f, arg));
 	}
 
-	/*
-	** No internal function match.  Check ufunc list
-	*/
+	// No internal function match.  Check ufunc list
 	if ((uf = locate_ufunc(name)) != NULL) {
 		return (dispatch_ufunc(uf, arg));
 	}
 
 #ifdef INCLUDE_API
-	/*
-	** Check for func in API list
-	*/
+	// Check for func in API list
 	if ((api = api_lookup(name)) != NULL) {
 		return (dispatch_api(api, arg));
 	}
 #endif
 
-	/*
-	** No function found?  Return NULL
-	*/
+	// No function found?  Return NULL
 	parse_error("Function not found: %s", name);
-	return (NULL);
+	return NULL;
 }
 
 /**
@@ -509,7 +506,6 @@ Var* ff_dim(vfuncptr func, Var* arg)
 Var* ff_format(vfuncptr func, Var* arg)
 {
 	Var *s, *obj = NULL;
-	char* ptr             = NULL;
 	char* type            = NULL;
 	char* format_str      = NULL;
 
@@ -539,9 +535,7 @@ Var* ff_format(vfuncptr func, Var* arg)
 	if (format_str == NULL) {
 		switch (V_TYPE(obj)) {
 		case ID_VAL:
-			/**
-			 ** no format specified.  Print out the format of the passed object.
-			 **/
+			// no format specified.  Print out the format of the passed object.
 			type = Format2Str(V_FORMAT(obj));
 			break;
 		case ID_STRING: type = (char*)"STRING"; break;
@@ -552,19 +546,11 @@ Var* ff_format(vfuncptr func, Var* arg)
 		}
 		return (newString(strdup(type)));
 	} else {
-
-		if (!strcasecmp(format_str, "byte"))
-			ptr = (char*)"byte";
-		else if (!strcasecmp(format_str, "short"))
-			ptr = (char*)"short";
-		else if (!strcasecmp(format_str, "int"))
-			ptr = (char*)"int";
-		else if (!strcasecmp(format_str, "float"))
-			ptr = (char*)"float";
-		else if (!strcasecmp(format_str, "double"))
-			ptr = (char*)"double";
-
-		return (V_func(ptr, create_args(1, NULL, obj, NULL, NULL)));
+		// NOTE(rswinkle): we already know format_str is valid because
+		// parse_args strcasecmps the values in limits, in this case FORMAT_STRINGS
+		// and assigns the matching value to format_str (so we always have a valid
+		// lowercase format)
+		return (V_func(format_str, create_args(1, NULL, obj, NULL, NULL)));
 	}
 }
 
@@ -589,12 +575,15 @@ Var* ff_create(vfuncptr func, Var* arg)
 	size_t i, j, k;
 	double v;
 
-	// TODO(rswinkle) combine/with use global array?
+	// TODO(rswinkle) combine/with use globals.c ORG2STR array?
 	const char* orgs[]    = {"bsq", "bil", "bip", "xyz", "xzy", "zxy", NULL};
 
 
 	// NOTE(rswinkle) question is do we default to INT64 or not, or base it on the platform
 	// and this decision affects at least a couple other functions, ie make_sym.
+	// Personally, I think we should officially drop 32-bit support.  The Linux distros have been
+	// recommending using amd64 for computers with >2GB of memory for years (who doesn't have > 2GB of
+	// memory?) and several are going to stop making i386 releases entirely by 2020
 	//
 	// Also x,y,z are size_t in other funcs but we don't handle size_t in parse_args.  Fortunately
 	// size_t is a u64 on 64 bit.  We could add size_t to parse_args if wanted.
@@ -753,7 +742,7 @@ Var* ff_create(vfuncptr func, Var* arg)
 
 Var* ff_nop(vfuncptr func, Var* arg)
 {
-	return (NULL);
+	return NULL;
 }
 
 Var* ff_echo(vfuncptr func, Var* arg)
@@ -937,19 +926,11 @@ Var* ff_replicate(vfuncptr func, Var* arg)
 	return (s);
 }
 
-/**
- ** Get an integer value out of a keyword.
- ** Returns:  1 if found
- **           0 if not specified
- **          -1 if not an int.
- **          >1 if an array of ints, returns first.
- **/
 
 /**
  ** Takes two objects, with the same ORG, FORMAT, and two matching axis,
  ** and concatenate them together along specified axis.
  **/
-
 Var* ff_cat(vfuncptr func, Var* arg)
 {
 	int ac;
@@ -958,10 +939,17 @@ Var* ff_cat(vfuncptr func, Var* arg)
 	char* axis_str;
 	int i, j, axis;
 
+	// UPDATE(rswinkle): Ok as far as I can tell the only reason
+	// we don't use alist + parse_args() here is because it can't handle arbitrary
+	// numbers of arguments...
+	//
+	// Maybe there's a way to update parse_args to
+	// handle this?  future research I guess
 	make_args(&ac, &av, func, arg);
 
 	if (ac < 4) {
 		parse_error("Not enough arguments to cat()");
+		free(av);
 		return (NULL);
 	}
 	/* find axis if specified */
@@ -990,6 +978,7 @@ Var* ff_cat(vfuncptr func, Var* arg)
 		axis_str = V_NAME(axis_var);
 	} else {
 		parse_error("cat(): No axis specified");
+		free(av);
 		return (NULL);
 	}
 	if (!strcasecmp(axis_str, "x"))
@@ -1000,6 +989,7 @@ Var* ff_cat(vfuncptr func, Var* arg)
 		axis = 2;
 	else {
 		parse_error("cat(): Invalid axis specified");
+		free(av);
 		return (NULL);
 	}
 
@@ -1007,10 +997,12 @@ Var* ff_cat(vfuncptr func, Var* arg)
 	for (i = 2; i < ac; i++) {
 		q = do_cat(p, av[i], axis);
 		if (q == NULL) {
+			free(av);
 			return (NULL);
 		}
 		p = q;
 	}
+
 	free(av);
 	return (p);
 }
@@ -1155,8 +1147,6 @@ Var* cat_string_text(Var* ob1, Var* ob2, int axis)
 Var* do_cat(Var* ob1, Var* ob2, int axis)
 {
 	Var *e, *s;
-	int i, j;
-	int s1[3], s2[3];
 	void *data, *d1, *d2, *out;
 	size_t dsize;
 	int nbytes;
@@ -1187,70 +1177,157 @@ Var* do_cat(Var* ob1, Var* ob2, int axis)
 
 	if (ob1_type == ID_STRING || ob1_type == ID_TEXT) return (cat_string_text(ob1, ob2, axis));
 
-	if (V_FORMAT(ob1) != V_FORMAT(ob2)) {
-		parse_error("cat(), Data formats must match.");
-		return (NULL);
-	}
-	if (V_ORG(ob1) != V_ORG(ob2)) {
-		parse_error("cat(), Data organization must match.");
-		return (NULL);
-	}
+	int out_format = combine_var_formats(ob1, ob2);
 
-	/**
-	 ** convert from XYZ into the appropriate ORG
-	 **/
-	axis = orders[V_ORG(ob1)][axis];
-
+	size_t i, j, k;
 	for (i = 0; i < 3; i++) {
-		s1[i] = V_SIZE(ob1)[i];
-		s2[i] = V_SIZE(ob2)[i];
-		if (i == axis) continue;
-		if (V_SIZE(ob1)[i] != V_SIZE(ob2)[i]) {
-			parse_error("Axis must match");
+		if (i == axis) {
+			continue;
+		}
+
+		// stupid davinci making the size array order change with the org
+		if (V_SIZE(ob1)[orders[V_ORG(ob1)][i]] != V_SIZE(ob2)[orders[V_ORG(ob2)][i]]) {
+
+			parse_error("Unspecified axes must match");
 			return (NULL);
 		}
 	}
 
 	nbytes = NBYTES(V_FORMAT(ob1));
+	nbytes = NBYTES(out_format);
 	d1     = V_DATA(ob1);
 	d2     = V_DATA(ob2);
 	dsize  = V_DSIZE(ob1) + V_DSIZE(ob2);
 	data   = calloc(nbytes, dsize);
 	out    = data;
-
-	for (j = 0; j < s1[2]; j++) {
-		for (i = 0; i < s1[1]; i++) {
-			memcpy(out, d1, s1[0] * nbytes);
-			out = (char*)out + s1[0] * nbytes;
-			d1  = (char*)d1 + s1[0] * nbytes;
-			if (axis == 0) {
-				memcpy(out, d2, s2[0] * nbytes);
-				out = (char*)out + s2[0] * nbytes;
-				d2  = (char*)d2 + s2[0] * nbytes;
-			}
-		}
-		if (axis == 1) {
-			memcpy(out, d2, s2[0] * s2[1] * nbytes);
-			out = (char*)out + s2[0] * s2[1] * nbytes;
-			d2  = (char*)d2 + s2[0] * s2[1] * nbytes;
-		}
-	}
-	if (axis == 2) {
-		memcpy(out, d2, s2[0] * s2[1] * s2[2] * nbytes);
-	}
 	s            = newVar();
 	V_TYPE(s)    = ID_VAL;
 	V_DATA(s)    = data;
-	V_FORMAT(s)  = V_FORMAT(ob1);
+	V_FORMAT(s)  = out_format;
 	V_ORG(s)     = V_ORG(ob1);
 	V_DSIZE(s)   = dsize;
 	V_SIZE(s)[0] = V_SIZE(ob1)[0];
 	V_SIZE(s)[1] = V_SIZE(ob1)[1];
 	V_SIZE(s)[2] = V_SIZE(ob1)[2];
-	/**
-	 ** replace the axis that changed
-	 **/
-	V_SIZE(s)[axis] = V_SIZE(ob1)[axis] + V_SIZE(ob2)[axis];
+
+	// replace the axis that changed
+	//
+	// find "location" of specificed axis (see array.c)
+	// stupid davinci madness
+	int tmp_axis = orders[V_ORG(ob1)][axis];
+
+	V_SIZE(s)[tmp_axis] = V_SIZE(ob1)[tmp_axis] + V_SIZE(ob2)[orders[V_ORG(ob2)][axis]];
+
+	u8* u8data = data;
+	u16* u16data = data;
+	u32* u32data = data;
+	u64* u64data = data;
+
+	i8* i8data = data;
+	i16* i16data = data;
+	i32* i32data = data;
+	i64* i64data = data;
+
+	float* fdata = data;
+	double* ddata = data;
+
+	size_t idx, oidx;
+	for (i=0; i<GetZ(ob1); ++i) {
+		for (j=0; j<GetY(ob1); ++j) {
+			for (k=0; k<GetX(ob1); ++k) {
+				idx = cpos(k, j, i, ob1);
+				oidx = cpos(k, j, i, s);
+				
+				switch (out_format) {
+				case DV_UINT8:  u8data[oidx] = extract_u32(ob1, idx); break;
+				case DV_UINT16: u16data[oidx] = extract_u32(ob1, idx); break;
+				case DV_UINT32: u32data[oidx] = extract_u32(ob1, idx); break;
+				case DV_UINT64: u64data[oidx] = extract_u64(ob1, idx); break;
+
+				case DV_INT8:   i8data[oidx] =  extract_i32(ob1, idx); break;
+				case DV_INT16:  i16data[oidx] = extract_i32(ob1, idx); break;
+				case DV_INT32:  i32data[oidx] = extract_i32(ob1, idx); break;
+				case DV_INT64:  i64data[oidx] = extract_i64(ob1, idx); break;
+
+				case DV_FLOAT:  fdata[oidx] = extract_float(ob1, idx); break;
+				case DV_DOUBLE: ddata[oidx] =  extract_double(ob1, idx); break;
+				}
+
+			}
+			if (axis == 0) {
+				for (k=0; k<GetX(ob2); ++k) {
+					idx = cpos(k, j, i, ob2);
+					oidx = cpos(k+GetX(ob1), j, i, s);
+					
+					switch (out_format) {
+					case DV_UINT8:  u8data[oidx] = extract_u32(ob2, idx); break;
+					case DV_UINT16: u16data[oidx] = extract_u32(ob2, idx); break;
+					case DV_UINT32: u32data[oidx] = extract_u32(ob2, idx); break;
+					case DV_UINT64: u64data[oidx] = extract_u64(ob2, idx); break;
+
+					case DV_INT8:   i8data[oidx] =  extract_i32(ob2, idx); break;
+					case DV_INT16:  i16data[oidx] = extract_i32(ob2, idx); break;
+					case DV_INT32:  i32data[oidx] = extract_i32(ob2, idx); break;
+					case DV_INT64:  i64data[oidx] = extract_i64(ob2, idx); break;
+
+					case DV_FLOAT:  fdata[oidx] = extract_float(ob2, idx); break;
+					case DV_DOUBLE: ddata[oidx] =  extract_double(ob2, idx); break;
+					}
+				}
+			}
+		}
+
+		if (axis == 1) {
+			for (j=0; j<GetY(ob2); ++j) {
+				for (k=0; k<GetX(ob1); ++k) {
+					idx = cpos(k, j, i, ob2);
+					oidx = cpos(k, j+GetY(ob1), i, s);
+
+					switch (out_format) {
+					case DV_UINT8:  u8data[oidx] = extract_u32(ob2, idx); break;
+					case DV_UINT16: u16data[oidx] = extract_u32(ob2, idx); break;
+					case DV_UINT32: u32data[oidx] = extract_u32(ob2, idx); break;
+					case DV_UINT64: u64data[oidx] = extract_u64(ob2, idx); break;
+
+					case DV_INT8:   i8data[oidx] =  extract_i32(ob2, idx); break;
+					case DV_INT16:  i16data[oidx] = extract_i32(ob2, idx); break;
+					case DV_INT32:  i32data[oidx] = extract_i32(ob2, idx); break;
+					case DV_INT64:  i64data[oidx] = extract_i64(ob2, idx); break;
+
+					case DV_FLOAT:  fdata[oidx] = extract_float(ob2, idx); break;
+					case DV_DOUBLE: ddata[oidx] =  extract_double(ob2, idx); break;
+					}
+				}
+			}
+		}
+	}
+	
+	if (axis == 2) {
+		for (i=0; i<GetZ(ob2); ++i) {
+			for (j=0; j<GetY(ob1); ++j) {
+				for (k=0; k<GetX(ob1); ++k) {
+					idx = cpos(k, j, i, ob2);
+					oidx = cpos(k, j, i+GetZ(ob1), s);
+
+					switch (out_format) {
+					case DV_UINT8:  u8data[oidx] = extract_u32(ob2, idx); break;
+					case DV_UINT16: u16data[oidx] = extract_u32(ob2, idx); break;
+					case DV_UINT32: u32data[oidx] = extract_u32(ob2, idx); break;
+					case DV_UINT64: u64data[oidx] = extract_u64(ob2, idx); break;
+
+					case DV_INT8:   u8data[oidx] =  extract_i32(ob2, idx); break;
+					case DV_INT16:  u16data[oidx] = extract_i32(ob2, idx); break;
+					case DV_INT32:  u32data[oidx] = extract_i32(ob2, idx); break;
+					case DV_INT64:  u64data[oidx] = extract_i64(ob2, idx); break;
+
+					case DV_FLOAT:  fdata[oidx] = extract_float(ob2, idx); break;
+					case DV_DOUBLE: ddata[oidx] =  extract_double(ob2, idx); break;
+					}
+				}
+			}
+		}
+
+	}
 
 	return (s);
 }
@@ -1275,7 +1352,7 @@ Var* ff_string(vfuncptr func, Var* arg)
 		return (NULL);
 	}
 	if (V_FORMAT(v) != DV_UINT8) {
-		parse_error("%s(), argument must be DV_UINT8 format");
+		parse_error("%s(), argument must be DV_UINT8 format", func->name);
 		return (NULL);
 	}
 
@@ -1390,7 +1467,7 @@ Var* ff_fsize(vfuncptr func, Var* arg)
 {
 	char* filename = NULL;
 	struct stat sbuf;
-	int* data;
+	i64* data;
 
 	Alist alist[2];
 	alist[0]      = make_alist("filename", ID_STRING, NULL, &filename);
@@ -1402,7 +1479,7 @@ Var* ff_fsize(vfuncptr func, Var* arg)
 		fprintf(stderr, "%s: No filename specified\n", func->name);
 		return (NULL);
 	} else {
-		data  = (int*)calloc(1, sizeof(int));
+		data  = (i64*)calloc(1, sizeof(i64));
 		*data = -1;
 		if ((stat(filename, &sbuf)) == 0) {
 			*data = sbuf.st_size;
@@ -1410,7 +1487,7 @@ Var* ff_fsize(vfuncptr func, Var* arg)
 				parse_error("%s: Integer truncation, size was %ld\n", func->name, sbuf.st_size);
 			}
 		}
-		return (newVal(BSQ, 1, 1, 1, DV_INT32, data));
+		return (newVal(BSQ, 1, 1, 1, DV_INT64, data));
 	}
 }
 
@@ -1669,10 +1746,149 @@ Var* ff_dump(vfuncptr func, Var* arg)
 
 	if (v == NULL) return (NULL);
 
-	dump_var(v, indent, depth);
+	dump_var(v, indent, depth, (FILE*)stdout);
 
 	return (NULL);
 }
+
+Var* ff_print(vfuncptr func, Var* arg)
+{
+	int ac;
+	Var** av;
+
+	int i;
+
+	Var* sep_var = NULL;
+	Var* end_var = NULL;
+	Var* file_var = NULL;
+
+	make_args(&ac, &av, func, arg);
+	for (i = 1; i < ac; ++i) {
+		if (V_TYPE(av[i]) == ID_KEYWORD && V_NAME(av[i]) != NULL) {
+		    if (!strcasecmp(V_NAME(av[i]), "sep")) {
+				sep_var = eval(V_KEYVAL(av[i]));
+				if (!sep_var || V_TYPE(sep_var) != ID_STRING) {
+					parse_error("%s: %s argument must be a string\n", func->name, V_NAME(av[i]));
+					free(av);
+					return NULL;
+				}
+		    } else if (!strcasecmp(V_NAME(av[i]), "end")) {
+				end_var = eval(V_KEYVAL(av[i]));
+				if (!end_var || V_TYPE(end_var) != ID_STRING) {
+					parse_error("%s: %s argument must be a string\n", func->name, V_NAME(av[i]));
+					free(av);
+					return NULL;
+				}
+		    } else if (!strcasecmp(V_NAME(av[i]), "file")) {
+				file_var = eval(V_KEYVAL(av[i]));
+				if (!file_var || V_TYPE(file_var) != ID_STRING) {
+					parse_error("%s: %s argument must be a string\n", func->name, V_NAME(av[i]));
+					free(av);
+					return NULL;
+				}
+			} else {
+				parse_error("%s: unrecognized keyword %s\n", func->name, V_NAME(av[i]));
+				free(av);
+				return NULL;
+			}
+			av[i] = NULL;
+		}
+	}
+	
+	const char space[] = " ";
+	const char newline[] = "\n";
+	char* sep;
+	char* end;
+	FILE* file;
+
+	//Unlike ff_dump, we do not pass in/use indent or limit.
+	//print should mostly be used for individual items anyway
+	//but it's easy enough to subscript a large array or structure
+	//if you only want to print part of it.  If you're printing
+	//it alone you might as well just use dump() though
+	//int indent = 0, limit = 0;
+	
+	int row;
+
+	if (!sep_var) {
+		sep = space;
+	} else {
+		sep = V_STRING(sep_var);
+	}
+	if (!end_var) {
+		end = newline;
+	} else {
+		end = V_STRING(end_var);
+	}
+
+	if (!file_var) {
+		file = (FILE*)stdout;
+	} else {
+		//NOTE(rswinkle): similar to ff_fprintf behavior, no force parameter
+		file = fopen(V_STRING(file_var), "a");
+		if (!file) {
+			parse_error("%s: failed to open file \"%s\"\n", func->name, V_STRING(file_var));
+			free(av);
+			return NULL;
+		}
+	}
+
+	Var* v;
+	int is_first = 1;
+	for (int arg=1; arg<ac; ++arg) {
+		if (!av[arg]) continue;
+		v = av[arg];
+
+		// easier to determine if sep is needed here
+		// than at the end of the loop (because of the NULLed
+		// keyword values which could be anywhere in av)
+		if (!is_first) {
+			fprintf(file, "%s", sep);
+		} else {
+			is_first = 0;
+		}
+
+		if (V_TYPE(v) == ID_UNK) {
+			v = eval(v);
+		}
+
+		switch (V_TYPE(v)) {
+		case ID_VAL:
+			pp_print_val(v, INT_MAX, file);
+			break;
+
+		case ID_STRUCT:
+			//TODO(rswinkle): still get an extra '\n' at the end
+			//of printing a struct ... it'd be ugly and a pain to
+			//get rid of it.
+			pp_print_struct(v, 0, INT_MAX, file);
+			break;
+
+		case ID_STRING:
+			fprintf(file, "%s", V_STRING(v));
+			break;
+
+		case ID_TEXT:
+			row            = V_TEXT(v).Row;
+			//NOTE(rswinkle): Should this just print the members as if
+			//they were individual strings?  ie no "index: " and only separated
+			//by sep not \n's?  But then maybe we should do the same thing for
+			//arrays, just print them as a series of individual values?
+			for (i = 0; i < row; i++) {
+				fprintf(file, "%*s%zu: %s\n", 0, "", (i + 1), V_TEXT(v).text[i]);
+			}
+			break;
+		}
+	}
+
+	fprintf(file, "%s", end);
+	if (file != stdout)
+		fclose(file);
+
+	free(av);
+	return NULL;
+}
+
 
 /*
 ** compare a to b to see if they are equivalent
@@ -1745,8 +1961,7 @@ int compare_vars(Var* a, Var* b)
 			return 0;
 		}
 
-		//TODO(rswinkle) check C spec integer conversions/promotions
-		format = max(V_FORMAT(a), V_FORMAT(b));
+		format = combine_formats(V_FORMAT(a), V_FORMAT(b));
 
 		for (i = 0; i < V_DSIZE(a); i++) {
 			switch (format) {
@@ -1759,14 +1974,17 @@ int compare_vars(Var* a, Var* b)
 			case DV_INT32:
 			case DV_INT64:
 				if (extract_i64(a, i) != extract_i64(b, rpos(i, a, b))) return 0;
+				break;
 
 			case DV_UINT64:
 				if (extract_u64(a, i) != extract_u64(b, rpos(i, a, b))) return 0;
-
+				break;
 			case DV_FLOAT:
 				if (extract_float(a, i) != extract_float(b, rpos(i, a, b))) return 0;
+				break;
 			case DV_DOUBLE:
 				if (extract_double(a, i) != extract_double(b, rpos(i, a, b))) return 0;
+				break;
 			}
 		}
 		return 1;
@@ -1789,6 +2007,7 @@ Var* new_i64(i64 i)
 }
 
 // TODO(rswinkle) macro define this based on arch?
+// or just change to DV_INT64?
 Var* newInt(int i)
 {
 	Var* v   = newVal(BSQ, 1, 1, 1, DV_INT32, calloc(1, sizeof(i32)));
@@ -1867,12 +2086,12 @@ Var* ff_exists(vfuncptr func, Var* arg)
 		return (NULL);
 	} else if (V_TYPE(v) == ID_STRING) {
 		filename = dv_locate_file(V_STRING(v));
-		return (newInt(access(filename, F_OK) == 0));
+		return (newInt(file_exists(filename)));
 	} else if (V_TYPE(v) == ID_TEXT) {
 		int n     = V_TEXT(v).Row;
 		int* data = calloc(n, sizeof(int));
 		for (i = 0; i < n; i++) {
-			data[i] = (access(V_TEXT(v).text[i], F_OK) == 0);
+			data[i] = file_exists(V_TEXT(v).text[i]);
 		}
 		return (newVal(BSQ, 1, n, 1, DV_INT32, data));
 	} else {
@@ -1948,6 +2167,7 @@ u64 v_length(Var* obj, int* err)
 	case ID_VAL: return V_DSIZE(obj);
 	default: *err = 1;
 	}
+	return 0;
 }
 
 Var* ff_length(vfuncptr func, Var* arg)
@@ -2285,13 +2505,13 @@ Var* ff_chdir(vfuncptr func, Var* arg)
 
 	if (dir == NULL) {
 		parse_error("%s: No directory specified", func->name);
+	} else if (file_exists(dir)) {
+		chdir(dir);
+		return newString(strdup(dir));
 	} else {
-		if (access(dir, F_OK) == 0) {
-			chdir(dir);
-			return (newString(strdup(dir)));
-		}
+		parse_error("%s: No such directory %s", func->name, dir);
 	}
-	return (NULL);
+	return NULL;
 }
 
 /*
@@ -2301,3 +2521,103 @@ double my_round(double d)
 {
 	return round(d);
 }
+
+
+Var* ff_isnan(vfuncptr func, Var* arg)
+{
+	Var *v = NULL, *e;
+	Alist alist[2];
+	u8* data;
+
+	alist[0]      = make_alist("obj", ID_UNK, NULL, &v);
+	alist[1].name = NULL;
+
+	if (parse_args(func, arg, alist) == 0) return NULL;
+
+	if (!v) {
+		parse_error("Expected 1 argument, obj, to function: %s(obj)", func->name);
+		return NULL;
+	}
+
+	if ((e = eval(v)) != NULL) v = e;
+
+	if (V_TYPE(v) != ID_VAL) {
+		parse_error("%s: argument must be ID_VAL", func->name);
+		return NULL;
+	}
+
+	/*
+	if (V_FORMAT(v) != DV_FLOAT && V_FORMAT(v) != DV_DOUBLE) {
+		parse_error("%s: format must be float or double", func->name);
+		return NULL;
+	}
+	*/
+
+	float* fdata = V_DATA(v);
+	double* ddata = V_DATA(v);
+
+	//NOTE(rswinkle): C standard only says it returns a non-zero integral value
+	//if it's nan, hence the != 0 to make it 1/0
+	data = calloc(1, V_DSIZE(v));
+	for (size_t i=0; i<V_DSIZE(v); ++i) {
+		if (V_FORMAT(v) == DV_FLOAT)
+			data[i] = (isnan(fdata[i]) != 0);
+		else if (V_FORMAT(v) == DV_DOUBLE)
+			data[i] = (isnan(ddata[i]) != 0);
+		else
+			data[i] = 0;
+	}
+
+	v = newVal(V_ORG(v), V_SIZE(v)[0], V_SIZE(v)[1], V_SIZE(v)[2], DV_UINT8, data);
+
+	return v;
+}
+
+Var* ff_isinf(vfuncptr func, Var* arg)
+{
+	Var *v = NULL, *e;
+	Alist alist[2];
+	u8* data;
+
+	alist[0]      = make_alist("obj", ID_UNK, NULL, &v);
+	alist[1].name = NULL;
+
+	if (parse_args(func, arg, alist) == 0) return NULL;
+
+	if (!v) {
+		parse_error("Expected 1 argument, obj, to function: %s(obj)", func->name);
+		return NULL;
+	}
+
+	if ((e = eval(v)) != NULL) v = e;
+
+	if (V_TYPE(v) != ID_VAL) {
+		parse_error("%s: argument must be ID_VAL", func->name);
+		return NULL;
+	}
+
+	if (V_FORMAT(v) != DV_FLOAT && V_FORMAT(v) != DV_DOUBLE) {
+		parse_error("%s: format must be float or double", func->name);
+		return NULL;
+	}
+
+	float* fdata = V_DATA(v);
+	double* ddata = V_DATA(v);
+
+	//NOTE(rswinkle): C standard only says it returns a non-zero integral value
+	//if it's inf, hence the != 0 to make it 1/0
+	//
+	//man page says glib > 2.01 return +/- 1 for +/-inf.
+	data = calloc(1, V_DSIZE(v));
+	for (size_t i=0; i<V_DSIZE(v); ++i) {
+		if (V_FORMAT(v) == DV_FLOAT)
+			data[i] = (isinf(fdata[i]) != 0);
+		else
+			data[i] = (isinf(ddata[i]) != 0);
+	}
+
+	v = newVal(V_ORG(v), V_SIZE(v)[0], V_SIZE(v)[1], V_SIZE(v)[2], DV_UINT8, data);
+
+	return v;
+}
+
