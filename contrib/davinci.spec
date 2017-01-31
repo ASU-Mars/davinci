@@ -33,15 +33,12 @@ Distribution: CentOS 6 (MSFF)
 Group:        Applications/Science
 License:      GPLv2
 Version:      2.18
-Release:      1
+Release:      1%{?dist}
 
 # This was generated using the following process:
 # svn checkout http://oss.mars.asu.edu/svn/davinci/davinci/tags/dv_2_17/ davinci-2.17
 # tar czf davinci-2.17.tar.gz davinci-2.17 --exclude=*.svn
 Source:      %{name}-%{version}.tar.gz
-
-# This is needed to fix undefined references to lzma_ functions from libdavinci.so
-Patch1: davinci-autoconf-lzma.patch
 
 #   build information
 BuildRequires: automake
@@ -58,8 +55,16 @@ BuildRequires: readline-devel
 BuildRequires: zlib
 BuildRequires: zlib-devel
 BuildRequires: curl-devel
-BuildRequires: lzma-devel
 BuildRequires: libxml2-devel
+
+%if 0%{?rhel} <= 6
+BuildRequires: lzma-devel
+%endif
+
+%if 0%{?rhel} <= 7
+BuildRequires: xz-devel
+%endif
+
 BuildRoot: %{_tmppath}/%{name}-%{version}-buildroot
 
 Requires: gnuplot
@@ -87,7 +92,6 @@ Prefix: %_prefix
 %prep
 
 %setup -q
-%patch1 -p1
 autoconf -f
 
 %build
@@ -98,8 +102,13 @@ make
 cd ../
 
 #Davinci
-./configure --prefix=%{_prefix} --libdir=%{_libdir} --with-libxml2=/usr/include  --with-viewer=/usr/bin/display \
---with-modpath=%{_libdir}/%{name} --with-help=%{_datadir}/%{name}/docs/dv.gih --with-cfitsio=/usr/include/cfitsio --enable-libisis=/mars/common/isis2_64/isisr 
+#./configure --prefix=%{_prefix} --libdir=%{_libdir} --with-libxml2=/usr/include  --with-viewer=/usr/bin/display \
+#--with-modpath=%{_libdir}/%{name} --with-help=%{_datadir}/%{name}/docs/dv.gih --with-cfitsio=/usr/include/cfitsio --enable-libisis=/mars/common/isis2_64/isisr 
+
+# Disable ISIS to make things simple
+./configure --prefix=%{_prefix} --libdir=%{_libdir} --with-libxml2=%{_includedir}  --with-viewer=%{_bindir}/display \
+--with-modpath=%{_libdir}/%{name} --with-help=%{_datadir}/%{name}/docs/dv.gih --with-cfitsio=%{_includedir}/cfitsio
+
 
 make
 
@@ -129,6 +138,9 @@ rm -rf $RPM_BUILD_ROOT
 chcon -f -t textrel_shlib_t %{_libdir}/libdavinci* > /dev/null 2>&1 || /bin/true
 
 %changelog
+* Tue Jan 17 2017 Nick Piacentine <npiace@mars.asu.edu> 2.18-1
+- Rebuilt for release 2.18, and removed lzma patch.
+
 * Mon Jun 22 2015 Nick Piacentine <npiace@mars.asu.edu> 2.17-3
 - Rebuilt with cleaned lzma patch.
  
