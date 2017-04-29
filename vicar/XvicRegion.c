@@ -5,8 +5,6 @@
 /* for internal use of the Xvic routines only.                          */
 /************************************************************************/
 
-#include <stdlib.h>
-#include <string.h>
 #include "XvicRegion.h"
 
 #ifndef MAX

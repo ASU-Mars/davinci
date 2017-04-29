@@ -26,7 +26,9 @@
  *
  *****************************************************************************/
 
-static const char* xbaeMatrixPublicResources[] = {"rows"};
+static const char *xbaeMatrixPublicResources[] = {
+  "rows"
+};
 
 /*****************************************************************************
  *
@@ -42,32 +44,36 @@ static const char* xbaeMatrixPublicResources[] = {"rows"};
  *
  *****************************************************************************/
 
-int gui_isXbaeMatrix(const char* name)
+int
+gui_isXbaeMatrix(const char *name)
 {
-	const char* aliases[] = {"XbaeMatrix", "xbaeMatrixWidgetClass", NULL};
-	return gui_isDefault(aliases, name);
+  const char *aliases[] = { "XbaeMatrix", "xbaeMatrixWidgetClass", NULL };
+  return gui_isDefault(aliases, name);
 }
 
-WidgetClass gui_getXbaeMatrixClass(void)
+WidgetClass
+gui_getXbaeMatrixClass(void)
 {
-	return xbaeMatrixWidgetClass;
+  return xbaeMatrixWidgetClass;
 }
 
-Narray* gui_getXbaeMatrixPublicResources()
+Narray *
+gui_getXbaeMatrixPublicResources()
 {
 
-	Narray* resList;
-	int i, num;
+  Narray	*resList;
+  int		i, num;
 
 #if DEBUG
-	fprintf(stderr, "DEBUG: gui_getXbaeMatrixPublicResources()\n");
+  fprintf(stderr, "DEBUG: gui_getXbaeMatrixPublicResources()\n");
 #endif
 
-	num     = sizeof(xbaeMatrixPublicResources) / sizeof(xbaeMatrixPublicResources[0]);
-	resList = Narray_create(num);
-	for (i = 0; i < num; i++) {
-		Narray_add(resList, (char*)xbaeMatrixPublicResources[i], NULL);
-	}
+  num = sizeof(xbaeMatrixPublicResources) / sizeof(xbaeMatrixPublicResources[0]);
+  resList = Narray_create(num);
+  for (i = 0; i < num; i++) {
+    Narray_add(resList, (char *) xbaeMatrixPublicResources[i], NULL);
+  }
 
-	return resList;
+  return resList;
+
 }

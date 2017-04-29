@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT(davinci, m4_esyscmd([grep 'davinci ' version.h | sed -e 's/\(.*\) \(.*\)";/\2/' | tr -d '\n']), [davinci-dev@mars.asu.edu])
+AC_INIT(davinci, m4_esyscmd([grep 'daVinci Version #' version.h | sed -e 's/\(.*\)#\(.*\)";/\2/' | tr -d '\n']), [davinci-dev@mars.asu.edu])
 
 
 
@@ -28,9 +28,7 @@ AM_CONFIG_HEADER(config.h)
 
 
 dnl Check for some required programs.
-dnl NOTE(rswinkle) it's 2016, every compiler supports C99 and we really need it
-AC_PROG_CC_C99
-
+AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_CXX
 dnl AC_PROG_YACC
@@ -51,10 +49,6 @@ AC_CHECK_TYPE(ptrdiff_t, ssize_t)
 dnl Enable Position Independent Code (often required by 64-bit systems)
 export CFLAGS="${CFLAGS} -fPIC"
 export CXXFLAGS="${CXXFLAGS} -fPIC"
-
-dnl Add or remove warnings as wanted
-WFLAGS="-Wall -Wextra -Wno-unused-result -Wno-sign-compare"
-CFLAGS="$CFLAGS $WFLAGS"
 
 dnl Handle user-controllable options.
 
@@ -88,7 +82,7 @@ esac
 
 case $host in
 	*-*-darwin*)
-		if test "x$enable_aqua" != "xno" ; then
+		if test "x$enable_aqua" != "xno" ; then 
 			echo "Configuring with aqua"
 			AC_DEFINE(HAVE_AQUA, 1, [ Use aqua instead of X11 ])
 		else
@@ -155,72 +149,70 @@ AM_CONDITIONAL(HAVE_LIBWSOCK32, [test "x$have_libwsock32" = "xyes"])
 AC_CHECK_LIB(regex, main, [have_libregex=yes],[have_libregex=no])
 AM_CONDITIONAL(HAVE_LIBREGEX, [test "x$have_libregex" = "xyes"])
 
-AC_CHECK_LIB(z, deflate, [have_libpng2=yes], [have_libpng2=no])
-dnl AC_CHECK_LIB(z, deflate)
-dnl AC_CHECK_LIB(png, png_read_info)
-dnl AC_CHECK_LIB(png, png_read_image,[have_libpng2=yes],[have_libpng2=no],
-dnl [$LDFLAGS -lpng -Liomedley/libpng-1.2.3])
+AC_CHECK_LIB(z, deflate)
+AC_CHECK_LIB(png, png_read_info)
+AC_CHECK_LIB(png, png_read_image,[have_libpng2=yes],[have_libpng2=no],
+				[$LDFLAGS -lpng -Liomedley/libpng-1.2.3])
 
 if test "x$have_libpng2" = "xyes"; then
 	AC_DEFINE(HAVE_LIBPNG, 1, [ if you have libpng] )
 fi
 
+dnl check for libxml2
+dnl If the user specified a path to enable_libxml2, use that
 
-dnl AC_ARG_WITH(libxml2,
-dnl     [  --with-libxml2=<path>      prefix of libxml2 libraries. e.g. /usr/lib or /usr/lib64],
-dnl     [LDFLAGS="$LDFLAGS -L$withval" ; enable_libxml2=$withval]
-dnl )
-dnl 
-dnl AC_ARG_WITH(libxml2_hdr,
-dnl     [  --with-libxml2_hdr=<path>      prefix of libxml2 headers. e.g. /usr/include/libxml2],
-dnl     [CFLAGS="$CFLAGS -I$withval" ; enable_xml2_headers=$withval]
-dnl )
-dnl 
-dnl if test "x$enable_libxml2" != "xno" -a "x$enable_libxml2" != "xyes" -a "x$enable_libxml2" != "x"; then
-dnl 	xml2_lib=$enable_libxml2
-dnl fi
-dnl 
-dnl if test "x$enable_xml2_headers" != "xno" -a "x$enable_xml2_headers" != "xyes" -a "x$enable_xml2_headers" != "x"; then
-dnl 	xml2_headers=$enable_xml2_headers
-dnl fi
-dnl 
-dnl dnl If libxml2 is supposed to be used, then check for its existance
-dnl 
-dnl if test "x$enable_libxml2" != "xno" -a "x$enable_libxml2" != "xyes" -a "x$enable_libxml2" != "x" -a "x$enable_xml2_headers" != "xno" -a "x$enable_xml2_headers" != "xyes" -a "x$enable_xml2_headers" != "x"; then
-dnl 
-dnl 	dnl Check for existance of libxml2
-dnl 	have_libxml2=yes
-dnl 	have_xml2_headers=no
-dnl 		
-dnl 	AC_CHECK_HEADER([libxml/parser.h], [have_xml2_headers=yes], [have_xml2_headers=no])
-dnl 	
-dnl 	AC_CHECK_LIB(xml2, xmlFileRead,
-dnl 				 [LIBS="$LIBS -lxml2 "],
-dnl 				 [have_libxml2=no],
-dnl 				 [])
-dnl 
-dnl 	if test "x$have_libxml2" = "xyes" -a "x$have_xml2_headers" = "xyes"; then
-dnl AC_MSG_WARN(HAVE_LIBXML2)
-dnl 	
-dnl 		AC_DEFINE(HAVE_LIBXML2, 1, [ headers and libraries for libxml2 ])
-dnl 	else
-dnl 		LDFLAGS=$LDFLAGS_SAVE;
-dnl 		CFLAGS=$CFLAGS_SAVE;
-dnl 		LIBS=$LIBS_SAVE;
-dnl 	fi
-dnl fi
+dnl Setup temp LDFLAGS and look for libxml2 library/header
+LDFLAGS_SAVE=${LDFLAGS};
+CFLAGS_SAVE=${CFLAGS};
+LIBS_SAVE=${LIBS};
 
-AC_CHECK_LIB(xml2, xmlFileRead, [have_libxml2=yes], [have_libxml2=no])
-if [[ "$have_libxml2" == "yes" ]]; then
 
-	#NOTE(rswinkle) this needs to be before CHECK_HEADER or it won't find it parser.h
-	CFLAGS="$CFLAGS `xml2-config --cflags`"
+AC_ARG_WITH(libxml2,
+    [  --with-libxml2=<path>      prefix of libxml2 libraries. e.g. /usr/lib or /usr/lib64],
+    [LDFLAGS="$LDFLAGS -L$withval" ; enable_libxml2=$withval]
+)
 
-	AC_CHECK_HEADER([libxml/parser.h], [have_xml2_headers=yes], AC_MSG_ERROR([Could not find parser.h]))
-	AC_DEFINE(HAVE_LIBXML2, 1, [ if you have libxml2 ])
+AC_ARG_WITH(libxml2_hdr,
+    [  --with-libxml2_hdr=<path>      prefix of libxml2 headers. e.g. /usr/include/libxml2],
+    [CFLAGS="$CFLAGS -I$withval" ; enable_xml2_headers=$withval]
+)
 
-	LIBS="$LIBS `xml2-config --libs`"
+if test "x$enable_libxml2" != "xno" -a "x$enable_libxml2" != "xyes" -a "x$enable_libxml2" != "x"; then
+	xml2_lib=$enable_libxml2
 fi
+
+if test "x$enable_xml2_headers" != "xno" -a "x$enable_xml2_headers" != "xyes" -a "x$enable_xml2_headers" != "x"; then
+	xml2_headers=$enable_xml2_headers
+fi
+
+dnl If libxml2 is supposed to be used, then check for its existance
+
+if test "x$enable_libxml2" != "xno" -a "x$enable_libxml2" != "xyes" -a "x$enable_libxml2" != "x" -a "x$enable_xml2_headers" != "xno" -a "x$enable_xml2_headers" != "xyes" -a "x$enable_xml2_headers" != "x"; then
+
+	dnl Check for existance of libxml2
+	have_libxml2=yes
+	have_xml2_headers=no
+		
+	AC_CHECK_HEADER([libxml/parser.h], [have_xml2_headers=yes], [have_xml2_headers=no])
+	
+	AC_CHECK_LIB(xml2, xmlFileRead,
+				 [LIBS="$LIBS -lxml2 "],
+				 [have_libxml2=no],
+				 [])
+
+	if test "x$have_libxml2" = "xyes" -a "x$have_xml2_headers" = "xyes"; then
+AC_MSG_WARN(HAVE_LIBXML2)
+	
+		AC_DEFINE(HAVE_LIBXML2, 1, [ headers and libraries for libxml2 ])
+	else
+		LDFLAGS=$LDFLAGS_SAVE;
+		CFLAGS=$CFLAGS_SAVE;
+		LIBS=$LIBS_SAVE;
+	fi
+fi
+
+dnl AC_CHECK_LIB(xml2, xmlFileRead)
+dnl AC_CHECK_HEADER([libxml/parser.h], , AC_MSG_ERROR([Couldn't find parser.h]))
 
 #check for cfitsio
 AC_ARG_WITH(cfitsio,
@@ -228,14 +220,14 @@ AC_ARG_WITH(cfitsio,
     [LDFLAGS="$LDFLAGS -L$withval/lib" ; CFLAGS="$CFLAGS -I$withval/include"]
 )
 #For some nonstandard installations (make it more flexible)
-AC_CHECK_HEADERS([fitsio.h])
+AC_CHECK_HEADERS([fitsio.h]) 
 
 #The standard location
 AC_CHECK_HEADERS([cfitsio/fitsio.h])
 
 AC_CHECK_LIB(cfitsio, ffopen)
 if test "x$ac_cv_lib_cfitsio_ffopen" = "xyes"; then
-	 if test "x$ac_cv_header_fitsio_h" = "xyes" -o  "x$ac_cv_header_cfitsio_fitsio_h" = "xyes"; then
+	 if test "x$ac_cv_header_fitsio_h" = "xyes" -o  "x$ac_cv_header_cfitsio_fitsio_h" = "xyes"; then 
 				have_cfitsio="yes"
 	 fi
 fi
@@ -246,17 +238,6 @@ AC_ARG_WITH(hdf5,
     [  --with-hdf5=<path>      prefix of hdf5 installation. e.g. /usr/local or /usr],
     [LDFLAGS="$LDFLAGS -L$withval/lib -lz" ; CFLAGS="$CFLAGS -I$withval/include"]
 )
-
-# Try using pkg-config to find hdf5 (could duplicate if they
-# use --with-hdf5 but most people try plain ./configure first
-# and duplicates don't matter iirc
-if [[ "`pkg-config --libs hdf5`" != "" ]]; then
-	LIBS="$LIBS `pkg-config --libs hdf5`"
-	CFLAGS="$CFLAGS `pkg-config --cflags hdf5`"
-fi
-
-
-
 dnl with the path the specified, see if we can find libhdf.
 ## For MINGW since wsock32 is needed for hdf5
 if test "x$have_libwsock32" = "xyes"; then
@@ -266,15 +247,14 @@ else
 fi
 AC_CHECK_LIB(hdf5, H5open,[have_libhdf=yes],[have_libhdf=no])
 
-## force HDF5 version 1.8
+## Force HDF5 Version 1.6
 if test "x$have_libhdf" = "xyes"; then
-	AC_DEFINE(H5_USE_18_API, 1, [use HDF5 1.8 API])
+	AC_DEFINE(H5_USE_16_API, 1, [use HDF5 1.6 API])
 fi
 
-AC_CHECK_LIB([curl],[curl_easy_init])
 
-# This was necessary at one point but isn't now
-#AC_CHECK_LIB(lzma,lzma_code)
+
+AC_CHECK_LIB([curl],[curl_easy_init])
 
 dnl Check for ImageMagic.
 AC_CHECK_LIB(Magick, GetImageInfo, [have_libmagick=yes],[have_libmagick=no])
@@ -293,7 +273,7 @@ dnl This is a C++ library; set the language so the test succeeds.
 dnl FIX: not sure why we need both lib and header check..
 dnl Note for FIX above: You may have the library installed on a system, but
 dnl not the header files. davinci already compiled with qmv support will run on
-dnl a system with just the library, but a recompile will fail on deghost.cpp if you
+dnl a system with just the library, but a recompile will fail on deghost.C if you
 dnl do not check for the header file, too.
 
 AC_LANG_PUSH(C++)
@@ -315,7 +295,7 @@ dnl for both if ISIS3 support is desired.
 
 dnl AC_ARG_WITH(isis3,
 dnl     [  --with-isis3=<path>     prefix of isis3 installation. e.g. /mars/common/isis3/PLATFORM/isis, requires Qt 4 and iomedley ], [ ISIS3LDFLAGS="-Xlinker -rpath-link -Xlinker $withval/3rdParty/lib -L$withval/lib -lisis3 -L$withval/3rdParty/lib -lcspice -lgeos -lgslcblas -lgsl -lqwt -lxerces-c" ; ISIS3CFLAGS="-I$withval/inc" ; ISIS3CPPFLAGS="-I$withval/inc" ; ISIS3_SAVE_LDLP=$LD_LIBRARY_PATH ; export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$withval/lib:$withval/3rdParty/lib" ; try_isis3="yes" ; ISIS3DIR=$withval ]
-dnl )
+dnl ) 
 dnl have_isis3=no
 dnl if test "$try_isis3" = "yes"; then
 dnl        if test "x$enable_iomedley" = "xno"; then
@@ -338,7 +318,7 @@ dnl                    AC_MSG_RESULT([ISIS3 libraries are missing])
 dnl                fi
 dnl                if test "$have_isis3" = "no"; then
 dnl                    AC_MSG_FAILURE([Needed ISIS3 files are missing. Either configure without ISIS3 support, or point --with-isis3 to a correct ISIS3 installation.])
-dnl                fi
+dnl                fi              
 dnl        else
 dnl                AC_MSG_FAILURE([--with-isis3 cannot work without a working Qt4 install.])
 dnl        fi
@@ -354,7 +334,9 @@ dnl fi
 dnl Check for headers.
 AC_HEADER_DIRENT
 AC_HEADER_STDC
-AC_CHECK_HEADERS(fcntl.h sys/file.h sys/time.h unistd.h)
+AC_CHECK_HEADERS(fcntl.h limits.h malloc.h sys/file.h sys/time.h unistd.h)
+AC_CHECK_HEADERS(values.h)
+AC_CHECK_HEADERS(limits.h)
 AC_CHECK_HEADERS(libgen.h)
 AC_CHECK_HEADERS(Xm/Xrt3d.h)
 
@@ -367,9 +349,9 @@ dnl Check for library functions.
 AC_FUNC_MEMCMP
 AC_TYPE_SIGNAL
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS(mkdir putenv select strdup strndup strspn strstr drand48 random)
-AC_CHECK_FUNCS(getdtablesize getwd usleep strtoul basename)
-AC_CHECK_FUNCS(dirname mmap)
+AC_CHECK_FUNCS(mkdir putenv select strdup strndup strspn strstr strtod strtol strtoul drand48)
+AC_CHECK_FUNCS(index rindex getdtablesize getwd usleep strtoul basename)
+AC_CHECK_FUNCS(dirname bcopy bcmp bzero)
 
 dnl Get path to libisis+includes from system env if ISISR is defined
 if test "x$ISISR" != "x"; then
@@ -401,6 +383,19 @@ if test "x$enable_libisis" != "xno"; then
 	fi
 fi
 
+dnl Check for plplot library.
+dnl FIX: why two distinct defines here?
+dnl FIX: does the plplot lib have to be pre-pended to $LIBS?
+dnl FIX: disabling all of this for now.
+
+dnl PL_LIB=""
+dnl AC_CHECK_LIB(plplotFX, c_plinit, LIBS="$LIBS -lplplotFX")
+dnl if test "$PL_LIB" != ""
+dnl then
+dnl 	AC_DEFINE(INCLUDE_API, 1, [plplot library is present])
+dnl 	AC_DEFINE(HAVE_PLPLOT, 1, [plplot library is present])
+dnl fi
+
 dnl Check for and configure local readline if not found yet.
 
 AC_ARG_WITH(readline,
@@ -408,6 +403,7 @@ AC_ARG_WITH(readline,
     [LDFLAGS="$LDFLAGS -L$withval/lib" ; CFLAGS="$CFLAGS -I$withval/include"]
 )
 
+AC_CHECK_LIB(ncurses, tputs)
 AC_CHECK_LIB(readline, rl_callback_handler_install)
 AC_CHECK_LIB(readline, rl_callback_handler_install, [have_readline=yes],[have_readline=no])
 dnl AC_CHECK_LIB(readline, rl_callback_handler_install)
@@ -426,7 +422,7 @@ if test "x$have_readline" = "xno" -o "x$need_libhistory" = "xyes"; then
 		dnl this looks a little fishy, but seems to work.
 		dnl this is causing modules to compile against ./readline, which
 		dnl doesn't exist.  At a minimum, this needs something like a ${local}
-		dnl prefix, but modules don't need this at all, so can we remove
+		dnl prefix, but modules don't need this at all, so can we remove 
 		dnl it instead?
 		if test "x$need_libhistory" = "xyes"; then
 			LIBS="$LIBS -L\$(top_srcdir)/readline -lhistory"
@@ -492,56 +488,48 @@ dnl AC_ARG_VAR(GPLOT_CMD, [default gnuplot program])
 dnl AC_ARG_VAR(DVHELP,    [default path for helpfile])
 dnl AC_ARG_VAR(EDITOR,    [default text editor])
 
-AC_ARG_WITH(viewer,
+AC_ARG_WITH(viewer, 
     [  --with-viewer=<path>    Path to image display program (default: xv)],
     [DV_VIEWER=$withval],
     [AC_PATH_PROG(DV_VIEWER, [xv])]
 )
-AC_ARG_WITH(gplot,
+AC_ARG_WITH(gplot, 
     [  --with-gnuplot=<path>   Path to gnuplot program (default: gnuplot) ],
     [GPLOT_CMD=$withval],
 	[AC_PATH_PROG(GPLOT_CMD, [gnuplot])]
 )
-AC_ARG_WITH(editor,
+AC_ARG_WITH(editor, 
     [  --with-editor=<path>    Path to text file editor (default: vim)],
     [EDITOR=$withval],
 	[AC_PATH_PROGS(EDITOR,[vim vi emacs edit])]
 )
-AC_ARG_WITH(help,
+AC_ARG_WITH(help, 
     [  --with-help=<path>      Path to davinci help file (default: DATADIR/davinci/docs/dv.gih)],
     [DVHELP=$withval],
     [DVHELP=${datadir}/davinci/docs/dv.gih]
 )
 
-AC_ARG_WITH(modpath,
+AC_ARG_WITH(modpath, 
     [  --with-modpath=<path>   Path to davinci loadable modules (if enabled) (default: LIBDIR/davinci)],
     [DV_MOD_PATH=$withval],
     [DV_MOD_PATH=${libdir}/davinci]
 )
 
-AC_ARG_WITH(library,
+AC_ARG_WITH(library, 
 	[  --without-library       Don't install Davinci library scripts],
 	[DV_LIBRARY="no"],
 	[AC_CHECK_FILES(library/utils.dvrc, [DV_LIBRARY="yes"],[DV_LIBRARY="no"])]
 )
 AM_CONDITIONAL(DV_LIBRARY, [test "x$DV_LIBRARY" != "xno"])
 
-AC_ARG_WITH(examples,
+AC_ARG_WITH(examples, 
 	[  --without-examples      Don't install Davinci examples],
 	[DV_EXAMPLES="no"],
 	[AC_CHECK_FILES(examples/day_maps_final.vicar,[DV_EXAMPLES="yes"],[DV_EXAMPLES="no"])]
 )
 AM_CONDITIONAL(DV_EXAMPLES, [test "x$DV_EXAMPLES" != "xno"])
 
-dnl NOTE(rswinkle): We should just delete this whole system.
-dnl Only moduls/foo, an example module, uses it now.  And this is *never* enabled.
-dnl Everything else uses just ff_modules.c/h which depends on modules_io.c/h
-dnl
-dnl IOW, apifunc.c, apidef.h, api.h and modules/foo/ should be deleted
-AC_ARG_ENABLE(api, AC_HELP_STRING([--enable-api], [enable api support.]))
-if [[ "$enable_api" == "yes" ]]; then
-	AC_DEFINE(INCLUDE_API, 1, [ include api support])
-fi
+
 
 
 
@@ -584,13 +572,13 @@ PRINT_YES_NO() {
         answer="No"
       fi
   fi
-  printf "%s\n" "$1:  ${answer}"
-  printf "%s\n" "printf(\"$1:  ${answer}\n\");" >> build_summary
+  echo "$1:  ${answer}"
+  echo "printf(\"$1:  ${answer}\\\n\");" >> build_summary
 }
 
 PRINT() {
-	printf "%s\n" "$1"
-	printf "%s\n" "printf(\"$1\n\");" >> build_summary
+	echo "$1"
+	echo "printf(\"$1\\\n\");" >> build_summary
 }
 
 rm -f build_summary
@@ -609,6 +597,7 @@ PRINT_YES_NO "             QMV" "$have_qmv"
 dnl PRINT_YES_NO "        libisis3" "$have_isis3"
 PRINT_YES_NO "             Qt4" "$have_qt"
 PRINT_YES_NO "         libxml2" "$have_libxml2"
+PRINT_YES_NO " libxml2 headers" "$have_xml2_headers"
 
 PRINT ""
 

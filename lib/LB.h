@@ -21,8 +21,8 @@ struct tagLB {
 	int             pix_h;
 };
 
-#define XfResizeLB(LB, w, h)    XfPosLB(LB, INT_MAX, INT_MAX, w, h)
-#define XfMoveLB(LB, x, y)      XfPosLB(LB, x, y, INT_MAX, INT_MAX)
+#define XfResizeLB(LB, w, h)    XfPosLB(LB, MAXINT, MAXINT, w, h)
+#define XfMoveLB(LB, x, y)      XfPosLB(LB, x, y, MAXINT, MAXINT)
 
 /**
 *** Function declarations

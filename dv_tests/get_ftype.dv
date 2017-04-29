@@ -1,5 +1,4 @@
-define get_ftype()
-{
+define get_ftype(){
 	if (type($1) == "TEXT"){
 		in_list=$1;
 		out_type=in_list;

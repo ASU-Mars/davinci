@@ -5,9 +5,6 @@
 #include <Xm/ScrollBarP.h>
 #include "XvicImageOverlay.h"
 
-#include <stdlib.h>
-#include <ctype.h>
-
 /* #define DPR(x) printf x */
 #define DPR(x)
 

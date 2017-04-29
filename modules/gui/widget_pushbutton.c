@@ -25,10 +25,24 @@
  *
  *****************************************************************************/
 
-static CallbackEntry pushButtonCallbacks[] = {{"activate", XmNactivateCallback, gui_defaultCallback},
-                                              {"arm", XmNarmCallback, gui_defaultCallback},
-                                              {"disarm", XmNdisarmCallback, gui_defaultCallback},
-                                              {NULL, NULL, NULL}};
+static CallbackEntry pushButtonCallbacks[] = {
+  {
+    "activate",
+    XmNactivateCallback,
+    gui_defaultCallback
+  },
+  {
+    "arm",
+    XmNarmCallback,
+    gui_defaultCallback
+  },
+  {
+    "disarm",
+    XmNdisarmCallback,
+    gui_defaultCallback
+  },
+  { NULL, NULL, NULL }
+};
 
 /*****************************************************************************
  *
@@ -36,8 +50,8 @@ static CallbackEntry pushButtonCallbacks[] = {{"activate", XmNactivateCallback, 
  *
  *****************************************************************************/
 
-static const char* pushButtonPublicResources[] = {
-    "labelString",
+static const char *pushButtonPublicResources[] = {
+  "labelString",
 };
 
 /*****************************************************************************
@@ -46,33 +60,38 @@ static const char* pushButtonPublicResources[] = {
  *
  *****************************************************************************/
 
-int gui_isPushButton(const char* name)
+int
+gui_isPushButton(const char *name)
 {
-	const char* aliases[] = {"pushbutton", "xmPushButtonWidgetClass", NULL};
-	return gui_isDefault(aliases, name);
+  const char *aliases[] = { "pushbutton", "xmPushButtonWidgetClass", NULL };
+  return gui_isDefault(aliases, name);
 }
 
-WidgetClass gui_getPushButtonClass(void)
+WidgetClass
+gui_getPushButtonClass(void)
 {
-	return xmPushButtonWidgetClass;
+  return xmPushButtonWidgetClass;
 }
 
-CallbackList gui_getPushButtonCallbacks(void)
+CallbackList
+gui_getPushButtonCallbacks(void)
 {
-	return pushButtonCallbacks;
+  return pushButtonCallbacks;
 }
 
-Narray* gui_getPushButtonPublicResources()
+Narray *
+gui_getPushButtonPublicResources()
 {
 
-	Narray* resList;
-	int i, num;
+  Narray	*resList;
+  int		i, num;
 
-	num     = sizeof(pushButtonPublicResources) / sizeof(pushButtonPublicResources[0]);
-	resList = Narray_create(num);
-	for (i = 0; i < num; i++) {
-		Narray_add(resList, (char*)pushButtonPublicResources[i], NULL);
-	}
+  num = sizeof(pushButtonPublicResources) / sizeof(pushButtonPublicResources[0]);
+  resList = Narray_create(num);
+  for (i = 0; i < num; i++) {
+    Narray_add(resList, (char *) pushButtonPublicResources[i], NULL);
+  }
 
-	return resList;
+  return resList;
+
 }

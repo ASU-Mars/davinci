@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "darray.h"
 
 /*
 
@@ -12,407 +13,475 @@
 
 */
 
-CVEC_NEW_DEFS2(dict_item, RESIZE)
+static int scope_count = 0;
+static int scope_size = 0;
+static Scope **scope_stack = NULL;
 
-static cvector_void scope_stack;
-
-
-void clean_scope(Scope*);
-
-void init_scope_stack()
+void
+scope_push(Scope *s)
 {
-	cvec_void(&scope_stack, 0, 8, sizeof(Scope), NULL, NULL);
+    if (scope_count == scope_size) {
+        scope_size = max(scope_size*2, 2);
+        scope_stack = (Scope **)my_realloc(scope_stack,
+                                           scope_size * sizeof(Scope *));
+    }
+    scope_stack[scope_count++] = s;
+}
+
+Scope *
+scope_pop()
+{
+    return(scope_stack[--scope_count]);
+}
+
+Scope *
+scope_tos()
+{
+    return(scope_stack[scope_count-1]);
+}
+Scope *
+global_scope()
+{
+    return(scope_stack[0]);
+}
+
+Scope *
+parent_scope()
+{
+    int count = max(scope_count-2, 0);
+    return(scope_stack[count]);
 }
 
 
-int scope_stack_count()
+Var *
+dd_find(Scope *s, char *name)
 {
-	return scope_stack.size;
+    Dictionary *dd = s->dd;
+
+    int i;
+    for (i = 1 ;  i < dd->count ; i++) {
+        if (dd->name[i] && !strcmp(dd->name[i], name)) {
+            return(dd->value[i]);
+        }
+    }
+    return(NULL);
 }
 
-Scope* scope_stack_get(int i)
+Var *
+dd_get_argv(Scope *s, int n)
 {
-	return CVEC_GET_VOID(&scope_stack, Scope, i);
-}
-
-Scope* scope_stack_back()
-{
-	return cvec_back_void(&scope_stack);
-}
-
-
-
-void scope_push(Scope* s)
-{
-	cvec_push_void(&scope_stack, s);
-}
-
-void scope_pop()
-{
-	// TODO(rswinkle): use clean_scope as elem_free?
-	Scope* s = cvec_back_void(&scope_stack);
-	clean_scope(s);
-
-	cvec_pop_void(&scope_stack, NULL);
-}
-
-Scope* scope_tos()
-{
-	return (Scope*)cvec_back_void(&scope_stack);
-}
-
-Scope* global_scope()
-{
-	return (Scope*)&scope_stack.a[0];
-}
-
-Scope* parent_scope()
-{
-	//TODO(rswinkle): why is parent -2 and not -1?
-	int count = (scope_stack.size > 2) ? scope_stack.size-2 : 0;
-	return CVEC_GET_VOID(&scope_stack, Scope, count);
-}
-
-Var* dd_find(Scope* s, char* name)
-{
-	dict_item* p;
-
-	int i;
-	for (i = 1; i < s->dd.size; i++) {
-		p = &s->dd.a[i];
-		if (p->name && !strcmp(p->name, name)) {
-			return p->value;
-		}
+	if (n < s->args->count) {
+		return(s->args->value[n]);
 	}
-	return NULL;
+	return(NULL);
 }
 
-Var* dd_get_argv(Scope* s, int n)
+Var *
+dd_get_argc(Scope *s)
 {
-	if (n < s->args.size) {
-		return s->args.a[n].value;
-	}
-	return NULL;
+    return(newInt(s->args->count-1));
 }
 
-Var* dd_get_argc(Scope* s)
+void
+dd_put(Scope *s, char *name, Var *v)
 {
-	return newInt(s->args.size - 1);
+    Dictionary *dd = s->dd;
+    int i;
+
+    for (i = 1 ;  i < dd->count ; i++) {
+        if (!strcmp(dd->name[i], name)) {
+            dd->value[i] = v;
+            return;
+        }
+    }
+    if (dd->count == dd->size) {
+        dd->size = max(dd->size * 2, 2);
+        dd->name = (char **)my_realloc(dd->name, sizeof(char *) * dd->size);
+        dd->value = (Var **)my_realloc(dd->value, sizeof(Var *) * dd->size);
+    }
+    if (name == NULL || strlen(name) == 0)
+        dd->name[dd->count] = NULL;
+    else
+        dd->name[dd->count] = strdup(name); /* strdup here? */
+    dd->value[dd->count] = v;
+    dd->count++;
 }
 
-void dd_put(Scope* s, char* name, Var* v)
+/**
+ ** stick an arg on the end of the arg list.
+ ** Update argc.
+ **/
+int
+dd_put_argv(Scope *s, Var *v)
 {
-	int i;
-	dict_item* p;
+    Dictionary *dd = s->args;
 
-	for (i = 1; i < s->dd.size; i++) {
-		p = &s->dd.a[i];
-		if (!strcmp(p->name, name)) {
-			p->value = v;
-			return;
-		}
-	}
+    if (dd->count == dd->size) {
+        dd->size *= 2;
+        dd->value = (Var **)my_realloc(dd->value, sizeof(Var *) * dd->size);
+        dd->name = (char **)my_realloc(dd->name, sizeof(char *) * dd->size);
+    }
+    /*
+    ** WARNING: This looks like it will break if you try to global a
+    **          value that was passed.
+    */
+    dd->value[dd->count] = v;
+    dd->name[dd->count] = V_NAME(v);
+    V_NAME(v) = NULL;
 
-	// C99 spec 6.7.8.21
-	// If there are fewer initializers in a brace-enclosed list than there are
-	// elements or members of an aggregate, or fewer characters in a string
-	// literal used to initialize an array of known size than there are elements
-	// in the array, the remainder of the aggregate shall be initialized implicitly
-	// the same as objects that have static storage duration.
-	//
-	// Actually GNU99 allows empty braces too
-	dict_item item = { 0 };
+    dd->count++;
 
-	if (name && strlen(name))
-		item.name = strdup(name); // strdup here?
+    /**
+     ** subtract 1 for $0
+     **/
+    V_INT(dd->value[0]) = dd->count - 1;
 
-	item.value = v;
-	cvec_push_dict_item(&s->dd, &item);
+    return(dd->count-1);
 }
 
-// stick an arg on the end of the arg list.
-// Update argc.
-int dd_put_argv(Scope* s, Var* v)
+void
+dd_unput_argv(Scope *s)
 {
-	cvector_dict_item* dd = &s->args;
+    Dictionary *dd = s->args;
+    Var *v;
+    int i;
 
-	/*
-	** WARNING: This looks like it will break if you try to global a
-	**          value that was passed.
-	*/
-	dict_item item = { 0 };
-
-	item.value = v;
-	item.name = V_NAME(v);
-	V_NAME(v) = NULL;
-
-	cvec_push_dict_item(dd, &item);
-
-	// subtract 1 for $0
-	V_INT(dd->a[0].value) = dd->size - 1;
-
-	return dd->size - 1;
+    for (i = 1 ; i < dd->count ; i++) {
+        v = dd->value[i];
+        V_NAME(v) = dd->name[i];
+    }
 }
 
-// NOTE(rswinkle): This literally does nothing!
-void dd_unput_argv(Scope* s)
+
+int
+dd_argc(Scope *s)
 {
-	Var* v;
-	int i;
-	dict_item* p;
-	cvector_dict_item* dd = &s->args;
-
-	for (i = 1; i < dd->size; i++) {
-		p = &dd->a[i];
-		v         = p->value;
-		V_NAME(v) = p->name;
-	}
+    /**
+     ** subtract 1 for $0
+     **/
+    return(s->args->count - 1);
 }
 
-int dd_argc(Scope* s)
+/**
+ ** return argc as a Var
+ **/
+Var *
+dd_argc_var(Scope *s)
 {
-	// subtract 1 for $0
-	return s->args.size - 1;
+    return(s->args->value[0]);
 }
 
-//NOTE(rswinkle): not used anywhere!
-// return argc as a Var
 /*
-Var* dd_argc_var(Scope* s)
-{
-	return s->args.a[0].value;
-}
+**
 */
-
-Var* dd_make_arglist(Scope* s)
+Var *
+dd_make_arglist(Scope *s)
 {
-	Var* p;
+    Dictionary *dd = s->args;
+	Var *v = new_struct(dd->count);
+	Var *p;
 	int i;
-	void* zero;
-	dict_item* item;
+	void *zero;
 
-	cvector_dict_item* dd = &s->args;
-	Var* v         = new_struct(dd->size);
-
-	for (i = 1; i < dd->size; i++) {
-		item = &dd->a[i];
-		if (V_TYPE(item->value) == ID_UNK) {
-			zero = calloc(1, 1);
-			p    = newVal(BSQ, 1, 1, 1, DV_UINT8, zero);
+    for (i = 1 ; i < dd->count ; i++) {
+		if (V_TYPE(dd->value[i]) == ID_UNK) {
+			zero = (char *)calloc(1,1);
+			p = newVal(BSQ, 1,1,1, BYTE, zero);
 			mem_claim(p);
 		} else {
-			p = V_DUP(item->value);
+			p = V_DUP(dd->value[i]);
 		}
-		add_struct(v, item->name, p);
-	}
-	return v;
+		add_struct(v, dd->name[i], p);
+    }
+	return(v);
 }
 
-void init_dd(cvector_dict_item* d)
+Dictionary *
+new_dd()
 {
-	cvec_dict_item(d, 1, 1, NULL, NULL);
+    Dictionary *d;
+    d = (Dictionary *)calloc(1, sizeof(Dictionary));
+    d->value = (Var **)calloc(1, sizeof(Var *));
+    d->size = 1;
+    d->count = 1;
 
-	dict_item* p = &d->a[0];
+    /**
+     ** Make a var for $argc
+     **/
+    d->value[0] = (Var *)calloc(1, sizeof(Var));
+    make_sym(d->value[0], INT, (char *)"0");
+    V_TYPE(d->value[0]) = ID_VAL;
 
-	// Make a var for $argc
-	p->value = calloc(1, sizeof(Var));
-
-	// that cast isn't even necessary right?
-	// why don't we use newInt?  Why don't we want to mem_malloc it?
-	// (which is called in newInt -> newVal -> newVar)
-	make_sym(p->value, DV_INT32, (char*)"0");
-	V_TYPE(p->value) = ID_VAL;
+    return(d);
 }
 
-void free_var2(void* v)
+/**
+ ** Allocate an init space for a scope
+ **/
+Scope *
+new_scope()
 {
-	free_var(*(Var**)v);
-}
+    Scope *s = (Scope *)calloc(1, sizeof(Scope));
 
-void init_scope(Scope* s)
-{
-	//not sure if this is necessary
-	memset(s, 0, sizeof(Scope));
-
-	// NOTE(rswinkle):
-	// Can't use elem_free like with tmp because of rm_symtab shenanigans in
-	// ufunc.c for symtab and because of pop() which removes and returns the stack values
-	cvec_varptr(&s->symtab, 0, 8, NULL, NULL);
-	cvec_varptr(&s->stack, 0, 2, NULL, NULL);
-
-	cvec_varptr(&s->tmp, 0, 16, free_var2, NULL);
-
-	init_dd(&s->dd);
-	init_dd(&s->args);
+    s->dd = new_dd();
+    s->args = new_dd();
+    s->stack = (Stack *)calloc(1, sizeof(Stack));
+    return(s);
 }
 
 
-// NOTE(rswinkle): Only used 3 times, all in ufunc.c::dispatch_ufunc()
-void free_scope(Scope* s)
+void
+free_scope(Scope *s)
 {
-	/* this looks wrong
-	   for (i = 0 ; i < s->dd->count ; i++) {
-	   free(s->dd->name);
-	   }
-	*/
+    /* this looks wrong
+       for (i = 0 ; i < s->dd->count ; i++) {
+       free(s->dd->name);
+       }
+    */
 
-	cvec_free_varptr(&s->symtab);
-	cvec_free_varptr(&s->stack);
-	cvec_free_varptr(&s->tmp);
+    if (s->dd->value) free(s->dd->value);
+    if (s->dd) free(s->dd);
 
-	cvec_free_void(&s->dd);
-	cvec_free_void(&s->args);
+    free(s->args->value);
+    free(s->args);
+    free(s);
 }
 
-void push(Scope* scope, Var* v)
+void
+push(Scope *scope, Var *v)
 {
-	cvec_push_varptr(&scope->stack, &v);
+    Stack *stack = scope->stack;
+    if (stack->top == stack->size) {
+        stack->size = max(stack->size*2, 2);
+        stack->value = (Var **) my_realloc(stack->value,
+                                           stack->size * sizeof(Var *));
+    }
+    stack->value[stack->top++] = v;
 }
 
-Var* pop(Scope* scope)
+Var *
+pop(Scope *scope)
 {
-	cvector_varptr* s = &scope->stack;
+    Stack *stack = scope->stack;
 
-	if (!s->size) return NULL;
-
-	Var* ret;
-	cvec_pop_varptr(s, &ret);
-
-	return ret;
+    if (stack->top == 0) return(NULL);
+    return(stack->value[--stack->top]);
 }
 
-void clean_table(cvector_varptr* vec)
+void
+clean_table(Symtable *s)
 {
-	for (int i=0; i<vec->size; ++i) {
-		free_var(vec->a[i]);
-	}
-	cvec_free_varptr(vec);
+    Symtable *t;
+
+    while(s != NULL) {
+        t = s->next;
+        free_var(s->value);
+        free(s);
+        s = t;
+    }
 }
 
-void clean_stack(Scope* scope)
+
+void
+clean_stack(Scope *scope)
 {
-	cvector_varptr* s = &scope->stack;
+    Stack *stack = scope->stack;
+    Var *v;
 
-	Var* v;
-	while (s->size) {
-		cvec_pop_varptr(s, &v);
-		if (!v) continue;
+    while(stack->top) {
+        v = stack->value[--stack->top];
+        if (v == NULL) continue;
 
-		if (mem_claim(v)) free_var(v);
-	}
+        if (mem_claim(v) != NULL) free_var(v);
+    }
 }
 
-// only used 6 times, 1 in main.c, 5 in p.c
-// Clean the stack and tmptab of the current scope
-void cleanup(Scope* scope)
+
+void
+clean_tmp(Scope *scope)
 {
-	clean_stack(scope);
-	
-	if (scope->tmp.capacity) {
-		/*
-		if (!scope->tmp.a)
-			printf("%p %p %zu %zu\n", &scope->tmp, scope->tmp.a, scope->tmp.size, scope->tmp.capacity);
-		*/
-
-		cvec_free_varptr(&scope->tmp);
-
-		// NOTE(rswinkle): This is necessary or else *bad things* happen
-		// because whoever wrote davinci didn't actually think about memory
-		// management so things are "cleaned up" in multiple places to be safe
-		//
-		// theoreticaly the capacity check above should prevent any problems
-		// because cvec_free_type sets size = capacity = 0
-		// but for some reason it still seg faults without this.  FTR the old
-		// Darray based version set itself to NULL too
-		scope->tmp.a = NULL;
-	}
+    if (scope->tmp) Darray_free(scope->tmp, (Darray_FuncPtr)free_var);
+    scope->tmp = NULL;
 }
 
-Var* mem_malloc()
+/**
+ ** Clean the stack and tmptab of the current scope
+ **/
+
+void
+cleanup(Scope *scope)
 {
-	size_t count    = 0;
-
-	Scope* scope = scope_tos();
-	cvector_varptr* vec = &scope->tmp;
-
-	Var* v       = calloc(1, sizeof(Var));
-
-	// If the top of the tmp scope is null, insert there, instead
-	// of adding a new one.  This will prevent the temp list from
-	// growing indefinitely.
-	//
-	// TODO(rswinkle): I don't really grok the above statement.  Why
-	// would there ever be a NULL at the end?
-	
-	if ((count = vec->size) > 0) {
-		if (!vec->a[count-1]) {
-			vec->a[count-1] = v;
-			return v;
-		}
-	}
-	cvec_push_varptr(vec, &v);
-	return v;
+    clean_stack(scope);
+    clean_tmp(scope);
+    /* clean_table(scope->tmp); */
+    scope->tmp = NULL;
 }
 
 
 
-Var* mem_claim_struct(Var* v)
+/**
+ ** allocate memory in the scope tmp list
+ **/
+
+#if 0
+Var *
+mem_malloc(void)
 {
+    Scope *scope = scope_tos();
+    Symtable *sym;
+
+    sym = (Symtable *)calloc(1, sizeof(Symtable));
+    sym->value = (Var *)calloc(1, sizeof(Var));
+    sym->next = scope->tmp;
+    scope->tmp = sym;
+
+    return(sym->value);
+}
+
+Var *
+mem_claim_struct(Var *v)
+{
+    int i;
+    int count;
+    Var *data;
+
+    if (V_TYPE(v) == ID_STRUCT) {
+        count = get_struct_count(v);
+        for (i = 0 ; i < count ; i++) {
+            get_struct_element(v, i, NULL, &data);
+            mem_claim(data);
+        }
+    }
+    return(v);
+}
+
+/**
+ ** claim memory in the scope tmp list, so it doesn't get free'd
+ ** return NULL if it isn't here.
+ **/
+Var *
+mem_claim(Var *ptr)
+{
+    Scope *scope = scope_tos();
+    Symtable *sym, *tmp;
+
+    if ((sym = scope->tmp) == NULL) return(NULL);
+
+    if (sym->value == ptr) {
+        scope->tmp = scope->tmp->next;
+        free(sym);
+        return(mem_claim_struct(ptr));
+    } else {
+        while(sym->next != NULL) {
+            if (sym->next->value == ptr) {
+                tmp = sym->next;
+                sym->next = sym->next->next;
+                free(tmp);
+                return(mem_claim_struct(ptr));
+            }
+            sym = sym->next;
+        }
+    }
+    return(NULL);
+}
+#endif
+
+Var *
+mem_malloc(void)
+{
+  Scope *scope = scope_tos();
+  Var *v = (Var *)calloc(1, sizeof(Var));
+  Var *top = NULL;
+  Var *junk = NULL;
+  int count = 0;
+
+  if (scope->tmp == NULL) scope->tmp = Darray_create(0);
+
+  /*
+   * If the top of the tmp scope is null, insert there, instead
+   * of adding a new one.  This will prevent the temp list from
+   * gowing indefinitely.
+   */
+  if ((count = Darray_count(scope->tmp)) > 0) {
+    if (Darray_get(scope->tmp, count-1, (void **)&top) == 1 && top == NULL) {
+      Darray_replace(scope->tmp, count-1, v, &junk);
+      return(v);
+    }
+  }
+
+  Darray_add(scope->tmp, v);
+  return(v);
+}
+
+Var *
+mem_claim_struct(Var *v)
+{
+    int i;
+    int count;
+    Var *data;
+
+    if (V_TYPE(v) == ID_STRUCT) {
+        count = get_struct_count(v);
+        for (i = 0 ; i < count ; i++) {
+            get_struct_element(v, i, NULL, &data);
+            mem_claim(data);
+        }
+    }
+    return(v);
+}
+
+/**
+ ** claim memory in the scope tmp list, so it doesn't get free'd
+ ** return NULL if it isn't here.
+ **/
+Var *
+mem_claim(Var *ptr)
+{
+    Scope *scope = scope_tos();
+    Var *v;
+    int count;
 	int i;
-	int count;
-	Var* data;
 
-	if (V_TYPE(v) == ID_STRUCT) {
-		count = get_struct_count(v);
-		for (i = 0; i < count; i++) {
-			get_struct_element(v, i, NULL, &data);
-			mem_claim(data);
-		}
-	}
-	return (v);
+    if (scope->tmp == NULL) return(NULL);
+    if ((count = Darray_count(scope->tmp)) == 0) return(NULL);
+
+    for (i = count-1 ; i >= 0 ; i--) {
+        if (Darray_get(scope->tmp, i, (void **)&v) == 1 && v == ptr) {
+            /*
+            ** This is it.
+            */
+            Darray_replace(scope->tmp, i, NULL, (void **)&v);
+            return(mem_claim_struct(v));
+        }
+    }
+    return(NULL);
+}
+
+/**
+ ** free the scope tmp list
+ **/
+
+void
+mem_free(Scope *scope)
+{
+    if (scope->tmp) Darray_free(scope->tmp, (Darray_FuncPtr)free_var);
 }
 
 
-// claim memory in the scope tmp list, so it doesn't get free'd
-// return NULL if it isn't here.
-Var* mem_claim(Var* ptr)
-{
-	Scope* scope = scope_tos();
-	Var* v;
-	int count;
-	int i;
-
-	cvector_varptr* vec = &scope->tmp;
-
-	if ((count = vec->size) == 0) return NULL;
-
-	// TODO(rswinkle): why loop backward?
-	for (i = count - 1; i >= 0; --i) {
-		if (vec->a[i] == ptr) {
-			v = vec->a[i];
-			vec->a[i] = NULL;
-			return mem_claim_struct(v);
-		}
-	}
-
-	return NULL;
-}
-
-
-void unload_symtab_modules(Scope* scope)
-{
+void
+unload_symtab_modules(Scope *scope){
 #ifdef BUILD_MODULE_SUPPORT
-	cvector_varptr* vec = &scope->symtab;
-	Var* v;
-	for (int i=0; i<vec->size; ++i) {
-		v = vec->a[i];
-		if (V_TYPE(v) == ID_MODULE) {
-			unload_dv_module(V_NAME(v));
-		}
-	}
-
+    Symtable *s = scope->symtab;
+    while(s){
+        Var *v = s->value;
+        s = s->next;
+        if (V_TYPE(v) == ID_MODULE){
+            unload_dv_module(V_NAME(v));
+        }
+    }
 #endif /* BUILD_MODULE_SUPPORT */
 }
+
 
 /**
  ** destroy the scopes dd and args
@@ -421,39 +490,44 @@ void unload_symtab_modules(Scope* scope)
  ** All the vars in args belong to the parent.  Dont free those.
  ** argv[0]
  **/
-void clean_scope(Scope* scope)
+
+void
+clean_scope(Scope *scope)
 {
-	// NOTE(rswirkle): Need to think about whether these checks are necessary
-	// but for now just replicating old logic
-	if (scope->dd.a) {
-		free_var(scope->dd.a[0].value);
-		cvec_free_dict_item(&scope->dd);
-	}
 
-	if (scope->args.a) {
-		free_var(scope->args.a[0].value);
-		cvec_free_dict_item(&scope->args);
-	}
+    if (scope->dd) {
+        free_var(scope->dd->value[0]);
+        free(scope->dd->value);
+        /* this looks wrong
+           for (i = 1 ; i< scope->dd->count ; i++) {
+           free(scope->dd->name[i]);
+           }
+        */
+        if (scope->dd->name) free(scope->dd->name);
+        free(scope->dd);
+    }
+    if (scope->args) {
+        free_var(scope->args->value[0]);
+        free(scope->args->value);
+        if (scope->args->name) free(scope->args->name);
+        free(scope->args);
+    }
+    clean_stack(scope);
+    clean_tmp(scope);
+    scope->tmp = NULL;
 
-	clean_stack(scope);
-	cvec_free_varptr(&scope->stack);
+    /* Clean modules since before cleaning symbol table
+       since they have a builtin mechansim of removing
+       themselves from the symbol table. Not doing so
+       causes a double free on the Symtable corresponding
+       to the module variable in the global symbol table. */
+    unload_symtab_modules(scope);
 
-	if (scope->tmp.capacity) {
-		/*
-		if (!scope->tmp.a)
-			printf("%p %p %zu %zu\n", &scope->tmp, scope->tmp.a, scope->tmp.size, scope->tmp.capacity);
-			*/
-		cvec_free_varptr(&scope->tmp);
-		// NOTE(rswinkle): again this is necessary or bad things happen ...
-		scope->tmp.a = NULL;
-	}
+    clean_table(scope->symtab);
+    scope->symtab = NULL;
 
-	/* Clean modules since before cleaning symbol table
-	   since they have a builtin mechansim of removing
-	   themselves from the symbol table. Not doing so
-	   causes a double free on the Symtable corresponding
-	   to the module variable in the global symbol table. */
-	unload_symtab_modules(scope);
+    free(scope->stack->value);
+    free(scope->stack);
 
-	clean_table(&scope->symtab);
+    free(scope);
 }

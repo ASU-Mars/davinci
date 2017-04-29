@@ -28,12 +28,33 @@
 /* CONFIRMED, COMPLETE */
 
 static CallbackEntry drawnButtonCallbacks[] = {
-    {"activate", XmNactivateCallback, gui_defaultCallback},
-    {"arm", XmNarmCallback, gui_defaultCallback},
-    {"disarm", XmNdisarmCallback, gui_defaultCallback},
-    {"expose", XmNexposeCallback, gui_defaultCallback},
-    {"resize", XmNresizeCallback, gui_defaultCallback},
-    {NULL, NULL, NULL}};
+  {
+    "activate",
+    XmNactivateCallback,
+    gui_defaultCallback
+  },
+  {
+    "arm",
+    XmNarmCallback,
+    gui_defaultCallback
+  },
+  {
+    "disarm",
+    XmNdisarmCallback,
+    gui_defaultCallback
+  },
+  {
+    "expose",
+    XmNexposeCallback,
+    gui_defaultCallback
+  },
+  {
+    "resize",
+    XmNresizeCallback,
+    gui_defaultCallback
+  },
+  { NULL, NULL, NULL }
+};
 
 /*****************************************************************************
  *
@@ -41,18 +62,21 @@ static CallbackEntry drawnButtonCallbacks[] = {
  *
  *****************************************************************************/
 
-int gui_isDrawnButton(const char* name)
+int
+gui_isDrawnButton(const char *name)
 {
-	const char* aliases[] = {"drawnbutton", "xmDrawnButtonWidgetClass", NULL};
-	return gui_isDefault(aliases, name);
+  const char *aliases[] = { "drawnbutton", "xmDrawnButtonWidgetClass", NULL };
+  return gui_isDefault(aliases, name);
 }
 
-WidgetClass gui_getDrawnButtonClass(void)
+WidgetClass
+gui_getDrawnButtonClass(void)
 {
-	return xmDrawnButtonWidgetClass;
+  return xmDrawnButtonWidgetClass;
 }
 
-CallbackList gui_getDrawnButtonCallbacks(void)
+CallbackList
+gui_getDrawnButtonCallbacks(void)
 {
-	return drawnButtonCallbacks;
+  return drawnButtonCallbacks;
 }
