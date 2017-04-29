@@ -25,10 +25,24 @@
  *
  *****************************************************************************/
 
-static CallbackEntry toggleButtonCallbacks[] = {{"arm", XmNarmCallback, gui_defaultCallback},
-                                                {"disarm", XmNdisarmCallback, gui_defaultCallback},
-                                                {"valueChanged", XmNvalueChangedCallback, gui_defaultCallback},
-                                                {NULL, NULL, NULL}};
+static CallbackEntry toggleButtonCallbacks[] = {
+  {
+    "arm",
+    XmNarmCallback,
+    gui_defaultCallback
+  },
+  {
+    "disarm",
+    XmNdisarmCallback,
+    gui_defaultCallback
+  },
+  {
+    "valueChanged",
+    XmNvalueChangedCallback,
+    gui_defaultCallback
+  },
+  { NULL, NULL, NULL }
+};
 
 /*****************************************************************************
  *
@@ -36,8 +50,8 @@ static CallbackEntry toggleButtonCallbacks[] = {{"arm", XmNarmCallback, gui_defa
  *
  *****************************************************************************/
 
-static const char* toggleButtonPublicResources[] = {
-    "set", "labelString",
+static const char *toggleButtonPublicResources[] = {
+  "set", "labelString",
 };
 
 /*****************************************************************************
@@ -46,33 +60,38 @@ static const char* toggleButtonPublicResources[] = {
  *
  *****************************************************************************/
 
-int gui_isToggleButton(const char* name)
+int
+gui_isToggleButton(const char *name)
 {
-	const char* aliases[] = {"togglebutton", "xmToggleButtonWidgetClass", NULL};
-	return gui_isDefault(aliases, name);
+  const char *aliases[] = { "togglebutton", "xmToggleButtonWidgetClass", NULL };
+  return gui_isDefault(aliases, name);
 }
 
-WidgetClass gui_getToggleButtonClass(void)
+WidgetClass
+gui_getToggleButtonClass(void)
 {
-	return xmToggleButtonWidgetClass;
+  return xmToggleButtonWidgetClass;
 }
 
-CallbackList gui_getToggleButtonCallbacks(void)
+CallbackList
+gui_getToggleButtonCallbacks(void)
 {
-	return toggleButtonCallbacks;
+  return toggleButtonCallbacks;
 }
 
-Narray* gui_getToggleButtonPublicResources()
+Narray *
+gui_getToggleButtonPublicResources()
 {
 
-	Narray* resList;
-	int i, num;
+  Narray	*resList;
+  int		i, num;
 
-	num     = sizeof(toggleButtonPublicResources) / sizeof(toggleButtonPublicResources[0]);
-	resList = Narray_create(num);
-	for (i = 0; i < num; i++) {
-		Narray_add(resList, (char*)toggleButtonPublicResources[i], NULL);
-	}
+  num = sizeof(toggleButtonPublicResources) / sizeof(toggleButtonPublicResources[0]);
+  resList = Narray_create(num);
+  for (i = 0; i < num; i++) {
+    Narray_add(resList, (char *) toggleButtonPublicResources[i], NULL);
+  }
 
-	return resList;
+  return resList;
+
 }

@@ -14,10 +14,10 @@
 #ifndef DV_WIDGET_SCROLLEDLIST_H
 #define DV_WIDGET_SCROLLEDLIST_H
 
-#include "gui.h"
 #include <Xm/List.h>
-#include <Xm/ScrollBar.h>
 #include <Xm/ScrolledW.h>
+#include <Xm/ScrollBar.h>
+#include "gui.h"
 
 /*****************************************************************************
  *
@@ -25,12 +25,13 @@
  *
  *****************************************************************************/
 
-int gui_isScrolledList(const char*);
-Widget gui_initScrolledList(const char*, WidgetClass, Widget, Var*, void**, Narray*, Widget*);
-WidgetClass gui_getScrolledListClass(void);
-CallbackList gui_getScrolledListCallbacks(void);
-void gui_getScrolledListPseudoResources(Widget, Var*);
-void gui_setScrolledListPseudoResources(Widget, Var*, Narray*);
-Narray* gui_getScrolledListPublicResources(void);
+int		gui_isScrolledList(const char *);
+Widget		gui_initScrolledList(const char *, WidgetClass, Widget,
+				     Var *, void **, Narray *, Widget *);
+WidgetClass	gui_getScrolledListClass(void);
+CallbackList	gui_getScrolledListCallbacks(void);
+void		gui_getScrolledListPseudoResources(Widget, Var *);
+void		gui_setScrolledListPseudoResources(Widget, Var *, Narray *);
+Narray *	gui_getScrolledListPublicResources(void);
 
 #endif /* DV_WIDGET_SCROLLEDLIST_H */

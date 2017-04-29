@@ -1,5 +1,9 @@
 #include <config.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef HAVE_LIBXML2
 
 #define ASCII_STRING "ASCII_String"

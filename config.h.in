@@ -15,14 +15,23 @@
 /* Path to gnuplot program for plot() function */
 #undef GPLOT_CMD
 
-/* use HDF5 1.8 API */
-#undef H5_USE_18_API
+/* use HDF5 1.6 API */
+#undef H5_USE_16_API
 
 /* Use aqua instead of X11 */
 #undef HAVE_AQUA
 
 /* Define to 1 if you have the `basename' function. */
 #undef HAVE_BASENAME
+
+/* Define to 1 if you have the `bcmp' function. */
+#undef HAVE_BCMP
+
+/* Define to 1 if you have the `bcopy' function. */
+#undef HAVE_BCOPY
+
+/* Define to 1 if you have the `bzero' function. */
+#undef HAVE_BZERO
 
 /* Define to 1 if you have the <cfitsio/fitsio.h> header file. */
 #undef HAVE_CFITSIO_FITSIO_H
@@ -43,7 +52,7 @@
 /* Define to 1 if you have the `drand48' function. */
 #undef HAVE_DRAND48
 
-/* Define to 1 if you have the file `examples/day_maps_final.vicar'. */
+/* Define to 1 if you have the file `AC_File'. */
 #undef HAVE_EXAMPLES_DAY_MAPS_FINAL_VICAR
 
 /* Define to 1 if you have the <fcntl.h> header file. */
@@ -57,6 +66,9 @@
 
 /* Define to 1 if you have the `getwd' function. */
 #undef HAVE_GETWD
+
+/* Define to 1 if you have the `index' function. */
+#undef HAVE_INDEX
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
@@ -91,13 +103,16 @@
 /* Define to 1 if you have the `msss_vis' library (-lmsss_vis). */
 #undef HAVE_LIBMSSS_VIS
 
+/* Define to 1 if you have the `ncurses' library (-lncurses). */
+#undef HAVE_LIBNCURSES
+
 /* if you have libpng */
 #undef HAVE_LIBPNG
 
 /* Define to 1 if you have the `qmv' library (-lqmv). */
 #undef HAVE_LIBQMV
 
-/* Define to 1 if you have the file `library/utils.dvrc'. */
+/* Define to 1 if you have the file `AC_File'. */
 #undef HAVE_LIBRARY_UTILS_DVRC
 
 /* have readline library */
@@ -118,7 +133,7 @@
 /* Define to 1 if you have the `Xm' library (-lXm). */
 #undef HAVE_LIBXM
 
-/* if you have libxml2 */
+/* headers and libraries for libxml2 */
 #undef HAVE_LIBXML2
 
 /* Define to 1 if you have the `Xmu' library (-lXmu). */
@@ -127,14 +142,20 @@
 /* Define to 1 if you have the `Xt' library (-lXt). */
 #undef HAVE_LIBXT
 
+/* Define to 1 if you have the `z' library (-lz). */
+#undef HAVE_LIBZ
+
+/* Define to 1 if you have the <limits.h> header file. */
+#undef HAVE_LIMITS_H
+
+/* Define to 1 if you have the <malloc.h> header file. */
+#undef HAVE_MALLOC_H
+
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
 /* Define to 1 if you have the `mkdir' function. */
 #undef HAVE_MKDIR
-
-/* Define to 1 if you have the `mmap' function. */
-#undef HAVE_MMAP
 
 /* if all motif parts are present */
 #undef HAVE_MOTIF
@@ -151,8 +172,8 @@
 /* Define to 1 if you have the <q.h> header file. */
 #undef HAVE_Q_H
 
-/* Define to 1 if you have the `random' function. */
-#undef HAVE_RANDOM
+/* Define to 1 if you have the `rindex' function. */
+#undef HAVE_RINDEX
 
 /* Define to 1 if you have the `select' function. */
 #undef HAVE_SELECT
@@ -180,6 +201,12 @@
 
 /* Define to 1 if you have the `strstr' function. */
 #undef HAVE_STRSTR
+
+/* Define to 1 if you have the `strtod' function. */
+#undef HAVE_STRTOD
+
+/* Define to 1 if you have the `strtol' function. */
+#undef HAVE_STRTOL
 
 /* Define to 1 if you have the `strtoul' function. */
 #undef HAVE_STRTOUL
@@ -210,6 +237,9 @@
 /* Define to 1 if you have the `usleep' function. */
 #undef HAVE_USLEEP
 
+/* Define to 1 if you have the <values.h> header file. */
+#undef HAVE_VALUES_H
+
 /* Define to 1 if you have the `vprintf' function. */
 #undef HAVE_VPRINTF
 
@@ -224,9 +254,6 @@
 
 /* headers and libraries for X11 and Xt */
 #undef HAVE_XT
-
-/* include api support */
-#undef INCLUDE_API
 
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */
@@ -246,9 +273,6 @@
 
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
-
-/* Define to the home page for this package. */
-#undef PACKAGE_URL
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION

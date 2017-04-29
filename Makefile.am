@@ -39,11 +39,11 @@ if LOCAL_READLINE
 endif
 
 if HAVE_LIBIBERTY
-  MINGW32_LIBIBERTY_LDADD = -liberty
+  MINGW32_LIBIBERTY_LDADD = -liberty	
 endif
 
 if HAVE_LIBREGEX
-  MINGW32_LIBREGEX_LDADD = -lregex
+  MINGW32_LIBREGEX_LDADD = -lregex	
 endif
 
 if HAVE_LIBWSOCK32
@@ -74,43 +74,43 @@ libdavinci_la_LIBADD = $(MY_READLINE_LDADD) $(MY_IOMEDLEY_LDADD) $(MY_MODULES_LI
 
 ##See configure.ac for libdavinci version
 ##libdavinci_la_LDFLAGS =  -version-info @LIB_CURRENT@:@LIB_REVISION@:@LIB_AGE@ -shrext .so
-libdavinci_la_LDFLAGS =  -version-info @LIB_CURRENT@:@LIB_REVISION@:@LIB_AGE@
+libdavinci_la_LDFLAGS =  -version-info @LIB_CURRENT@:@LIB_REVISION@:@LIB_AGE@ 
 
 libdavinci_la_SOURCES = apifunc.c array.c avl.c binDCT.c \
-	narray.c \
-	dct.c deghost.cpp dvio.c dvio_ascii.c \
+	darray.c \
+	dct.c deghost.C dvio.c dvio_ascii.c \
 	dvio_aviris.c dvio_envi.c dvio_ers.c dvio_goes.c dvio_grd.c \
 	dvio_hdf.c dvio_imath.c dvio_iomedley.c dvio_isis.c dvio_magic.c \
 	dvio_pds.c dvio_isis3.c dvio_pnm.c dvio_raw.c dvio_specpr.c dvio_csv.c \
 	dvio_themis.c dvio_vicar.c dvio_xml.c endian_norm.c ff_ffill.c\
-	error.c ff.c ff_avg.c ff_ipi.c ff_contour.c ff_rotate.c\
+	error.c ff.c ff_ascii.c ff_avg.c ff_ipi.c ff_contour.c ff_rotate.c\
 	ff_bbr.c ff_cluster.c ff_convolve.c ff_deghost.c ff_display.c \
 	ff_fft.c ff_filetype.c ff_fncc.c ff_gnoise.c ff_gplot.c ff_vplot.c\
 	ff_header.c ff_hstretch.c ff_ifill.c ff_interp.c ff_ix.c \
 	ff_load.c ff_loadvan.c ff_meta.c ff_ramp.c ff_filter.c\
-	ff_moment.c ff_pause.c ff_pbm.c ff_pca.c \
-	ff_random.c ff_raw.c ff_rgb.c ff_rice.c \
+	ff_moment.c ff_pause.c ff_pbm.c ff_pca.c ff_plplot.c \
+	ff_projection.c ff_random.c ff_raw.c ff_rgb.c ff_rice.c \
 	ff_shade.c ff_slant.c ff_sort.c ff_source.c ff_struct.c \
 	ff_text.c ff_version.c ff_vignette.c ff_write.c ff_xfrm.c \
 	fft.c fft2f.c fft_mayer.c fit.c ff_coreg.c ff_boxfilter.c \
 	ff_bin5.c  ff_transform.c ff_blend.c ff_unpack.c \
 	header.c ff_resample.c \
-	help.c cvector.c \
-	globals.c matrix.c \
+	help.c init.c \
+	isis_obj.c globals.c matrix.c \
 	misc.c motif_tools.c \
-	p.c pp.c \
+	newfunc.c p.c pp.c \
 	pp_math.c printf.c reserved.c \
-	rice.c rpos.c scope.c \
+	rfunc.c rice.c rpos.c scope.c \
 	spread.c string.c symbol.c \
-	system.c \
-	ufunc.c \
+	system.c tools.c \
+	ufunc.c util.c \
 	x.c xrt_print_3d.c \
-	XformTable.h narray.h fit.h trigtbl.h api.h dos.h func.h \
-	ufunc.h dvio.h dvio_pds4.h header.h \
-	version.h apidef.h dvio_specpr.h help.h \
+	XformTable.h darray.h fit.h trigtbl.h api.h dos.h func.h \
+	products.h ufunc.h api_extern_defs.h dvio.h dvio_pds4.h header.h \
+	proto.h version.h apidef.h dvio_specpr.h help.h rfunc.h \
 	xrt_print_3d.h avl.h endian_norm.h io_loadmod.h scope.h \
-	ff.h system.h ff_modules.h module_io.h \
-	toolbox.h configwin.h fft.h motif_tools.h \
+	ff.h isis_obj.h system.h ff_modules.h module_io.h \
+	toolbox.h configwin.h fft.h motif_tools.h tools.h \
 	lexer.c parser.c parser.h y_tab.h \
 	ff_gconvolve.c ff_warp.c ff_median.c ff_radial.c ff_window.c \
 	dvio_fits.c ff_extract.c dvio_tdb.c \
@@ -123,9 +123,6 @@ library_includedir=$(includedir)/@PACKAGE@
 library_include_HEADERS = $(wildcard *.h)
 
 davinci_LDADD = -ldavinci $(MY_MODULES_LIB)  $(MY_LIBLTDLC_LDADD)
-
-#export-dynamic is not supported for PE+ targets (ie mingw windows)
-# we use --export-all-symbols in davinci_build/windows/makewin.sh
 davinci_LDFLAGS = -export-dynamic
 davinci_SOURCES = main.c
 
