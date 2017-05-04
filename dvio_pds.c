@@ -1715,7 +1715,7 @@ Var *ReadPDS(vfuncptr func, Var * arg)
     return (NULL);
 
   /* Handle loading many filenames */
-  if (V_TYPE(fn) == ID_TEXT) {
+  if (fn != NULL && V_TYPE(fn) == ID_TEXT) {
     Var *s = new_struct(V_TEXT(fn).Row);
     for (i = 0; i < V_TEXT(fn).Row; i++) {
       filename = strdup(V_TEXT(fn).text[i]);
@@ -1730,7 +1730,7 @@ Var *ReadPDS(vfuncptr func, Var * arg)
       free_struct(s);
       return (NULL);
     }
-  } else if (V_TYPE(fn) == ID_STRING) {
+  } else if (fn != NULL && V_TYPE(fn) == ID_STRING) {
     filename = V_STRING(fn);
     return(do_loadPDS(func, filename, data, suffix_data));
   } else {
