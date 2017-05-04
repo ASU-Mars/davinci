@@ -63,7 +63,7 @@ ff_load(vfuncptr func, Var * arg)
 	if (parse_args(func, arg, alist) == 0) return(NULL);
 
 	if (fvar == NULL) {
-        parse_error("No filename specified to load()");
+        parse_error("No filename specified to %s()", func->name);
         return (NULL);
 	}
 
