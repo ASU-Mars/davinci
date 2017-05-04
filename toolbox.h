@@ -99,7 +99,7 @@
 #define StripLeading(zstrz, zstripz) \
             {char *zcz; \
              for (zcz=zstrz; ((*zcz != '\0') && (*zcz == zstripz)); ++zcz) ; \
-             strcpy(zstrz, zcz);}
+             memmove(zstrz, zcz, strlen(zcz)+1);}
 
 #define StripTrailing(zstrz, zstripz) \
             {char *zcz; \
