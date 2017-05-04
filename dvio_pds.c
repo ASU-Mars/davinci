@@ -103,10 +103,10 @@ typedef struct _dataKeys {
 extern char *var_endian(Var * v);
 #endif
 
-//Var * dv_LoadISISFromPDS_New(FILE *fp, char *fn, int dptr, OBJDESC *qube);
-//Var * dv_LoadISISSuffixesFromPDS_New(FILE *fp, char *fname, size_t dptr, OBJDESC *qube);
-//Var * dv_LoadImage_New(FILE *fp, char *fn, int dptr, OBJDESC *image);
-//Var * dv_LoadHistogram_New(FILE *fp, char *fn, int dptr, OBJDESC *hist);
+extern Var * dv_LoadISISFromPDS_New(FILE *fp, char *fn, int dptr, OBJDESC *qube);
+extern Var * dv_LoadISISSuffixesFromPDS_New(FILE *fp, char *fname, size_t dptr, OBJDESC *qube);
+extern Var * dv_LoadImage_New(FILE *fp, char *fn, int dptr, OBJDESC *image);
+extern Var * dv_LoadHistogram_New(FILE *fp, char *fn, int dptr, OBJDESC *hist);
 
 static char *history_parse_buffer(FILE * in);
 static char * history_remove_isis_indents(const char *history);
@@ -593,7 +593,7 @@ traverseObj(OBJDESC *top, Var *v, dataKey objSizeMap[], int *nObj, OBJDESC *pFil
 	Var *tmpVar = NULL;
 
 	for(kw = OdlGetFirstKwd(top); kw != NULL; kw = OdlGetNextKwd(kw)){
-		kwName = OdlGetKwdName(kw); printf("Name is %s\n", kwName); //drd added just printf()
+		kwName = OdlGetKwdName(kw);
 
 		if (kw->is_a_pointer){
 			kwName = fix_name(mod_name_if_necessary(kwName));
@@ -1829,7 +1829,6 @@ do_loadPDS(vfuncptr func, char *filename, int data, int suffix_data)
   	free_struct(v);
   	return NULL;
   }
-  printf("Returned v is %p\n",v); // drd
   return (v);
 }
 
@@ -2363,13 +2362,13 @@ rfImage(dataKey *objSize, Var * ob){
 
 	fileName = (char *)alloca(strlen(objSize->FileName)+1);
 	pickFilename(fileName, objSize->FileName);
-	printf("This is where the Reading image comes from\n"); // drd
 	parse_error("Reading %s from %s...\n", objSize->Name, fileName);
 	if ((fp = fopen(fileName, "rb")) == NULL){
 		fprintf(stderr, "Unable to open file for reading: \"%s\". Reason: %s\n", fileName, strerror(errno));
 		return 0;
 	}
 
+	// TODO remove the drd debugging statements
 	data = dv_LoadImage_New(fp, fileName, objSize->dptr, objSize->objDesc);
 	if (data != NULL) {
 		unsigned char *flex; // drd
@@ -2497,7 +2496,7 @@ history_remove_isis_indents(const char *history)
     rc = regexec(&indent_regex, lines[i], sizeof(matches)/sizeof(regmatch_t), matches, 0);
     if (rc == 0){
       /* a match was found: get rid of indent */
-      strcpy(lines[i], &lines[i][matches[0].rm_eo]);
+      memmove(lines[i], &lines[i][matches[0].rm_eo], strlen(&lines[i][matches[0].rm_eo])+1);
     }
   }
 
