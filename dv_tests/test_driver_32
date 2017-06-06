@@ -1,6 +1,10 @@
 source("driver_helpers.dv")
 
-process_dir=".";
+if ($argc > 0){
+	process_dir=$1;
+} else {
+	process_dir=".";
+}
 
 final_results = traverse(process_dir,"test-");
 

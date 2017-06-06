@@ -1,0 +1,11 @@
+define internal_image_testing1() {
+#TESTCASE 1: Default/new Read() and Write(new) and read(new) and xplot -> interferogram
+    a=read("../../data/internal_ifgm.hdf");
+    write(a,$TMPDIR+"/a.hdf",type=hdf, force=1);
+    b=read($TMPDIR+"/a.hdf");
+    xplot(b.ifgm[1:1100,1:2], axis=x);
+	if (equals(a,b)) exit(0);
+    exit(1);
+}
+
+

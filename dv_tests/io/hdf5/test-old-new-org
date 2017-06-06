@@ -1,0 +1,23 @@
+# verify that the old and new files compare for all org types
+
+a=load("../../data/234_old.hdf")
+b=load("../../data/234_new.hdf")
+
+if (HasValue(a.bsq) == 0 || HasValue(a.bil) == 0 || HasValue(a.bip) == 0 || HasValue(a.lines) == 0 || HasValue(a.str) == 0){
+	exit(1)
+}
+if (HasValue(b.bsq) == 0 || HasValue(b.bil) == 0 || HasValue(b.bip) == 0 || HasValue(b.lines) == 0 || HasValue(b.str) == 0){
+	exit(1)
+}
+
+
+rc=0
+rc+=sum(dim(a.bsq)==dim(b.bsq))+sum(dim(a.bil)==dim(b.bil))+sum(dim(a.bip)==dim(b.bip))
+rc+=(max(abs(a.bsq-b.bsq))==0)+(max(abs(a.bil-b.bil))==0)+(max(abs(a.bip-b.bip))==0)
+
+if (rc != 12){
+	exit(1)
+}
+
+exit(0)
+

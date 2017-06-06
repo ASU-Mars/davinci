@@ -1,5 +1,6 @@
 #Set up environment variable for file locations
-putenv("FITS_TEST_FILES","/mars/u/ddoerres/work/davinci_2016_01/build/davinci64/dv_tests/io/fits/fits")
+# putenv("FITS_TEST_FILES","/mars/u/ddoerres/work/davinci_2016_01/build/davinci64/dv_tests/io/fits/fits")
+putenv("FITS_TEST_FILES","./fits")
 
 all = 0;
 success = 0;

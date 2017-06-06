@@ -31,6 +31,7 @@ define traverse(){
 	start_dir=$1;
 	test_pfx=$2;
 	printf("\nTraversing: %s\n",start_dir);
+	chdir(start_dir)
 
 	# results[1]:passed results[2]:failed results[3]:skipped
 	results = create(3,1,1,format=int,org=bsq,start=0,step=0);

@@ -1,0 +1,8 @@
+define basic_testing(){
+#TESTCASE 1: Default Write() and Read() of the array -> new array is same as initial array
+    a=create(2,3,1)+1;
+    write(object=a,filename=$TMPDIR+"/a.hdf",type=hdf, force=1);
+    b=read($TMPDIR+"/a.hdf");
+	if (equals(a,b[0])) exit(0); 
+	exit(1);
+}

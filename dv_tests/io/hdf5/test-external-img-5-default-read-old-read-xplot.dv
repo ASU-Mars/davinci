@@ -1,0 +1,9 @@
+define external_image_read(){
+#TESTCASE 5: Read(old) and xplot -> Noise (NEGATIVE TESTING)
+    a=read("../../data/external_ifgm.hdf", method="old");
+    z=read("../../data/external_ifgm.hdf");
+    xplot(a.ifgm[1:1100,1:2], axis=x);
+    if (equals(a,z)==0) exit(0);
+    exit(1);
+}
+

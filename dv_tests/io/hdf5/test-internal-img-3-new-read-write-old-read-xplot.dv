@@ -1,0 +1,9 @@
+define internal_image_testing3() {
+#TESTCASE 3: Default/new Read() and Write(new) and read(old) and xplot -> Noise (NEGATIVE TESTING)
+    a=read("../../data/internal_ifgm.hdf", method="new");
+    write(a,$TMPDIR+"/a.hdf",type=hdf,method="new", force=1);
+    b=read($TMPDIR+"/a.hdf",method="old");
+    xplot(b.ifgm[1:1100,1:2], axis=x);
+	if (equals(a,b)==0) exit(0);
+    exit(1);
+}
