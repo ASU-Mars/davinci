@@ -1,3 +1,6 @@
+#ifndef _FUNC_H_
+#define _FUNC_H_
+
 #include <config.h>
 
 #ifdef __cplusplus
@@ -178,7 +181,18 @@ Var *LoadSpecpr(FILE *,char *,int );
 Var *LoadSpecprHeaderStruct(FILE *,char *,int );
 int dv_LoadISISHeader(FILE *fp, char *filename, int rec, char *element, Var **var);
 Var * LoadVanilla(char *filename);
-Var * LoadHDF5(char *filename);
+#ifdef HAVE_LIBHDF5
+/**
+ * enumeration of davinci handling of size / dims
+ */
+typedef enum {
+	DV_H5_DIM_DEF_HANDLING = -1, /* default handling */
+	DV_H5_DIM_NEW_HANDLING,      /* new handling - dims in HDF file are ZxYxX */
+	DV_H5_DIM_OLD_HANDLING       /* old handling - dims in HDF file are XxYxZ */
+} dv_h5_dim_handling;
+
+Var * LoadHDF5(char *filename, dv_h5_dim_handling dim_handling);
+#endif
 
 int WriteRaw(Var *, FILE *, char *);
 int WriteGRD(Var *, FILE *, char *);
@@ -193,7 +207,7 @@ int WriteIMath(Var *s, FILE *fp, char *filename);
 int WriteAscii(Var *, char *, int);
 
 #ifdef HAVE_LIBHDF5
-void WriteHDF5(hid_t parent, char *name, Var *v);
+void WriteHDF5(hid_t parent, char *name, Var *v, int hdf_std_dims);
 #endif
 
 #ifdef HAVE_LIBMAGICK
@@ -594,3 +608,5 @@ int math_operable(Var *a, Var *b);
 int compare_struct(Var *a, Var *b);
 int get_struct_names(const Var *v, char ***names, const char *prefix);
 Var *ff_create_text(vfuncptr func, Var * arg);
+
+#endif

@@ -1,0 +1,9 @@
+define compare_internal_external_image() {
+#TESTCASE 1:  Read and compare image generated internally by davinci with image generated externally HDF5reader -> interferogram
+    a=read("../../data/external_ifgm.hdf");
+    b=read("../../data/internal_ifgm.hdf");
+    xplot(a.ifgm[,1],b.ifgm[,1]);
+	if (equals(a,b)) exit(0);
+    exit(1);
+}
+

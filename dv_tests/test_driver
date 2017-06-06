@@ -1,6 +1,10 @@
 source("driver_helpers.dv")
 
-process_dir=".";
+if ($argc > 0){
+	process_dir=$1;
+} else {
+	process_dir=".";
+}
 
 is_64_bit = (length(syscall("uname -a | grep x86_64")) > 0)
 

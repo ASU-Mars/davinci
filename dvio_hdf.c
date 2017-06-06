@@ -1,19 +1,44 @@
 #include "parser.h"
-#include "func.h"
 #include <sys/stat.h>
 #include "endian_norm.h"
 
 #ifdef HAVE_LIBHDF5
 
 
+#define int_swap(a,b) \
+{\
+	int t;\
+	t=(a); (a)=(b); (b)=t;\
+}
 
 #define HDF5_COMPRESSION_LEVEL 6
 
 #include <hdf5.h>
-Var *load_hdf5(hid_t parent);
+
+
+#define ATTR_ORG "org"
+#define ATTR_STD "dv_std"
+
+/** type of iter_data passed into dataset_attr_iter() */
+typedef struct {
+	int has_org_attr;
+	int has_dv_std_attr;
+	int org;
+} dv_h5_dataset_attr_iter_data;
+
+/**
+ * type of iter_data passed into group_iter()
+ */
+typedef struct {
+	dv_h5_dim_handling dim_handling; /* input: size / dim handling */
+	Var *data; /* output VAR */
+} dv_h5_group_iter_data;
+
+
+Var *load_hdf5(hid_t parent, dv_h5_dim_handling dim_handling);
 
 void
-WriteHDF5(hid_t parent, char *name, Var *v)
+WriteHDF5(hid_t parent, char *name, Var *v, int old_hdf)
 {
     hid_t dataset, datatype, dataspace, aid2, attr, child, plist;
     hsize_t size[3];
@@ -57,7 +82,7 @@ WriteHDF5(hid_t parent, char *name, Var *v)
         }
         for (i = 0 ; i < get_struct_count(v) ; i++) {
             get_struct_element(v, i, &n, &d);
-            WriteHDF5(child, n, d);
+            WriteHDF5(child, n, d, old_hdf);
         }
         if (top == 0) H5Gclose(child);
         break;
@@ -69,7 +94,12 @@ WriteHDF5(hid_t parent, char *name, Var *v)
         ** member is a value.  Create a dataset
         */
         for (i = 0 ; i < 3 ; i++) {
-	  size[i] = V_SIZE(v)[i];
+			if (old_hdf){
+				size[i] = V_SIZE(v)[i];
+			}
+			else {
+				size[2-i] = V_SIZE(v)[i];
+			}
         }
         org = V_ORG(v);
         dataspace = H5Screate_simple(3, size, NULL);
@@ -103,13 +133,22 @@ WriteHDF5(hid_t parent, char *name, Var *v)
 #endif
 
         aid2 = H5Screate(H5S_SCALAR);
-        attr = H5Acreate(dataset, "org", H5T_STD_I32BE, aid2, H5P_DEFAULT);
+        attr = H5Acreate(dataset, ATTR_ORG, H5T_STD_I32BE, aid2, H5P_DEFAULT);
 #ifndef WORDS_BIGENDIAN
-	intswap(org);
+        intswap(org);
 #endif
         H5Awrite(attr, H5T_STD_U32BE, &org);
-        H5Sclose(aid2);
         H5Aclose(attr);
+        if (!old_hdf) {
+			int dv_std_value = 1;
+            attr = H5Acreate(dataset, ATTR_STD, H5T_STD_I32BE, aid2, H5P_DEFAULT);
+#ifndef WORDS_BIGENDIAN
+	        intswap(dv_std_value);
+#endif
+            H5Awrite(attr, H5T_STD_U32BE, &dv_std_value);
+            H5Aclose(attr);
+        }
+        H5Sclose(aid2);
 
         H5Tclose(datatype);
         H5Sclose(dataspace);
@@ -204,15 +243,48 @@ WriteHDF5(hid_t parent, char *name, Var *v)
     return;
 }
 
-/*
-** Make a VAR out of a HDF5 object
-*/
+/**
+ * Finds various dataset attr
+ */
 static herr_t
-group_iter(hid_t parent, const char *name, void *data)
+dataset_attr_iter(hid_t parent, const char *attr_name, void *iter_data)
+{
+    hid_t attr;
+	dv_h5_dataset_attr_iter_data *data = (dv_h5_dataset_attr_iter_data *)iter_data;
+
+	if (attr_name != NULL){
+		if (strcasecmp(attr_name,ATTR_ORG) == 0){
+			data->has_org_attr = 1;
+
+            if ((attr = H5Aopen_name(parent, attr_name)) < 0){
+				fprintf(stderr, "Unable to read attribute %s\n", attr_name);
+			}
+			else {
+				H5Aread(attr, H5T_STD_I32BE, &data->org);
+#ifndef WORDS_BIGENDIAN
+				intswap(data->org);
+#endif
+				H5Aclose(attr);
+			}
+		}
+		else if (strcasecmp(attr_name,ATTR_STD) == 0){
+			data->has_dv_std_attr = 1;
+		}
+	}
+
+	return 1; // immediately return
+}
+
+/**
+ * Make a VAR out of a HDF5 object
+ * iter_data is of type dv_h5_group_iter_data
+ */
+static herr_t
+group_iter(hid_t parent, const char *name, void *iter_data)
 {
     H5G_stat_t buf;
     hid_t child, dataset, dataspace, datatype, attr;
-    int org, type, size[3],  dsize, i;
+    int type, size[3],  dsize, i;
     int var_type;
     hsize_t datasize[3], maxsize[3];
     H5T_class_t classtype;
@@ -220,8 +292,11 @@ group_iter(hid_t parent, const char *name, void *data)
     void *databuf, *databuf2;
     int Lines=1;
 	extern int VERBOSE;
+	dv_h5_dataset_attr_iter_data attr_info;
+	int nattr, j, k;
+	int old_hdf;
 
-    *((Var **)data) = NULL;
+    ((dv_h5_group_iter_data *)iter_data)->data = NULL;
 
     if (H5Gget_objinfo(parent, name, 1, &buf) < 0) return -1;
     type = buf.type;
@@ -230,7 +305,7 @@ group_iter(hid_t parent, const char *name, void *data)
     switch (type)  {
     case H5G_GROUP:
         child = H5Gopen(parent, name);
-        v = load_hdf5(child);
+        v = load_hdf5(child, ((dv_h5_group_iter_data *)iter_data)->dim_handling);
         V_NAME(v) = (name ? strdup(name) : 0);
         H5Gclose(child);
         break;
@@ -264,23 +339,25 @@ group_iter(hid_t parent, const char *name, void *data)
             type=ID_STRING;
         }
 
+
         if (type!=ID_STRING){
-            org = BSQ;
-            if ((attr = H5Aopen_name(dataset, "org")) < 0){
-                parse_error("Unable to get org. Assuming %s.\n", Org2Str(org));
-            }
-            else {
-                H5Aread(attr, H5T_STD_I32BE, &org);
-#ifndef WORDS_BIGENDIAN
-                intswap(org);
-#endif
-                H5Aclose(attr);
-            }
+			memset(&attr_info,0,sizeof(attr_info));
+			attr_info.org = BSQ;
+
+			nattr = H5Aget_num_attrs(dataset);
+			k = 0;
+			for(j=0; j<nattr; j++){
+				H5Aiterate(dataset, &k, dataset_attr_iter, &attr_info);
+			}
+
+			if (!attr_info.has_org_attr){
+				parse_error("Unable to get org for \"%s\". Assuming %s.\n", name, Org2Str(attr_info.org));
+			}
         }
         else {
             Lines = 0;
             if ((attr = H5Aopen_name(dataset, "lines")) < 0){
-                parse_error("Unable to get lines. Assuming %d.\n", Lines);
+                parse_error("Unable to get lines for \"%s\". Assuming %d.\n", name, Lines);
             }
             else {
                 H5Aread(attr, H5T_STD_I32BE, &Lines);
@@ -296,7 +373,7 @@ group_iter(hid_t parent, const char *name, void *data)
             dataspace = H5Dget_space(dataset);
             H5Sget_simple_extent_dims(dataspace, datasize, maxsize);
             for (i = 0 ; i < 3 ; i++) {
-                size[i] = datasize[i];
+				size[i] = datasize[i];
             }
             dsize = H5Sget_simple_extent_npoints(dataspace);
             databuf = calloc(dsize, NBYTES(type));
@@ -327,17 +404,37 @@ group_iter(hid_t parent, const char *name, void *data)
              */
             if(type == USHORT) { // promote to INT
             	int i;
-            	databuf2 = calloc(dsize, NBYTES(INT));
-            	for(i = 0; i < dsize; i++) {
-            		((int*)databuf2)[i] = (int)((unsigned short *)databuf)[i];
+				databuf = (char *)realloc(databuf, dsize*NBYTES(INT));
+            	for(i = dsize-1; i >= 0; i--) {
+            		((int*)databuf)[i] = (int)((unsigned short *)databuf)[i];
             	}
             	type = INT;
-            	free(databuf);
-            	databuf=databuf2;
-
             }
 
-            v = newVal(org, size[0], size[1], size[2], type, databuf);
+			if (((dv_h5_group_iter_data *)iter_data)->dim_handling == DV_H5_DIM_OLD_HANDLING){
+				/* user forced old size / dim handling */
+				old_hdf = 1;
+			}
+			else if (((dv_h5_group_iter_data *)iter_data)->dim_handling == DV_H5_DIM_NEW_HANDLING){
+				/* user forced new size / dim handling */
+				old_hdf = 0;
+			}
+			else {
+				/* no forced size / dim handling: determine from dv_std and org attributes */
+				if (attr_info.has_org_attr){
+					/* a davinci file: its an old hdf if no dv_std attr is not present */
+					old_hdf = attr_info.has_dv_std_attr? 0: 1;
+				}
+				else {
+					/* not a davinci file - assume standard reading method */
+					old_hdf = 0;
+				}
+			}
+            if (!old_hdf) {
+				int_swap(size[2],size[0]);
+            }
+
+            v = newVal(attr_info.org, size[0], size[1], size[2], type, databuf);
 
             V_NAME(v) = strdup(name);
         }	
@@ -411,7 +508,7 @@ group_iter(hid_t parent, const char *name, void *data)
 		pp_print_var(v, V_NAME(v), 0, 0);
 	}
 
-    *((Var **)data) = v;
+    ((dv_h5_group_iter_data *)iter_data)->data = v;
     return 1;
 }
 
@@ -424,7 +521,7 @@ count_group(hid_t group, const char *name, void *data)
 }
 
 Var *
-LoadHDF5(char *filename)
+LoadHDF5(char *filename, dv_h5_dim_handling dim_handling)
 {
     Var *v;
     hid_t group;
@@ -440,7 +537,7 @@ LoadHDF5(char *filename)
 
     group = H5Gopen(file, "/");
 
-    v = load_hdf5(group);
+    v = load_hdf5(group, dim_handling);
 
     H5Gclose(group);
     H5Fclose(file);
@@ -449,12 +546,13 @@ LoadHDF5(char *filename)
 
 
 Var *
-load_hdf5(hid_t parent)
+load_hdf5(hid_t parent, dv_h5_dim_handling dim_handling)
 {
-    Var *o, *e;
+    Var *o, *e = NULL;
     int count = 0;
     int idx = 0;
     herr_t ret;
+	dv_h5_group_iter_data iter_data = {dim_handling, NULL};
 
     H5Giterate(parent, ".", NULL, count_group, &count);
 
@@ -465,10 +563,10 @@ load_hdf5(hid_t parent)
     
     o = new_struct(count);
     
-    while ((ret = H5Giterate(parent, ".", &idx, group_iter, &e)) > 0)  {
-		if (e != NULL) {
-			add_struct(o, V_NAME(e), e);
-			V_NAME(e) = NULL;
+    while ((ret = H5Giterate(parent, ".", &idx, group_iter, &iter_data)) > 0)  {
+		if (iter_data.data != NULL) {
+			add_struct(o, V_NAME(iter_data.data), iter_data.data);
+			V_NAME(iter_data.data) = NULL;
 		}
 		if (idx == count) break;
     }

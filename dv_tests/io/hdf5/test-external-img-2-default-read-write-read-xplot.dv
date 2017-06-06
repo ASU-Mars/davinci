@@ -1,0 +1,9 @@
+define external_image_testing2() {
+#TESTCASE 2: Default Read() and default write() to davinci and default read() from davinci -> interferogram  
+    a=read("../../data/external_ifgm.hdf")
+    write(a,$TMPDIR+"/a.hdf",type=hdf, force=1);
+    b=read($TMPDIR+"/a.hdf");
+    xplot(b.ifgm[1:1100,1:2], axis=x);
+	if (equals(a,b)) exit(0);
+    exit(1);
+}

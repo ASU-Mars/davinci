@@ -359,7 +359,8 @@
  read(filename="path" [,record=INT],
       [,xlow=INT] [,xhigh=INT] [,xskip=INT]
       [,ylow=INT] [,yhigh=INT] [,yskip=INT]
-      [,zlow=INT] [,zhigh=INT] [,zskip=INT])
+      [,zlow=INT] [,zhigh=INT] [,zskip=INT]
+      [,old_hdf=INT])
 
     The read() function loads the specified data file.   The read() 
     function can automatically recognize and load the following file 
@@ -396,6 +397,11 @@
     Reading a PPM image produces a 3-plane, BIP cube of byte values.
     Each plane represents the red, green and blue values respectivly.
 
+    The old_hdf value optionally forces HDF5 read to use davinci's original
+    (zx-sawpped) dimension order or the new dimension order. By default
+    the appropriate dimension order is used based on dataset attributes
+    stored in the files.
+
     The functions load() and import() are aliases for the read() function.
 
  See Also:
@@ -406,7 +412,8 @@
 ?write()
  write() - Save data to file
 
- write(object=VAL, filename="path", type=TYPE, force=1, [separator=STRING], [header=0])
+ write(object=VAL, filename="path", type=TYPE, force=1, [separator=STRING], [header=0]
+       [,old_hdf=1])
 
     The write() function copies data to a file.  The value of type specifies 
     the type of file written, and is one of: 
@@ -449,6 +456,9 @@
         if available.  Otherwise davinci generates generic column names 
         following the pattern "col_n".  This format only supports single
         plane data in BSQ organization.
+
+        The HDF5 files can be written in the old davinci dimension order
+        (zx-swapped) by setting the optional parameter old_hdf to 1.
 
  See Also:
     filetype(), read(), rgb(), load_pds(), load_raw(), ascii(),

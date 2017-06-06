@@ -28,12 +28,13 @@ ff_write(vfuncptr func, Var *arg)
     char *title = NULL;
     char *type=NULL;
     char *separator = NULL;   /* for csv */
-    int header = 0;           /* for csv */
+    int   header = 0;         /* for csv */
     int   force=0;            /* Force file overwrite */
+    int   old_hdf = 0;   /* force HDF5 write with user-specified method - BUG 2418 */
     unsigned short iom_type_idx, iom_type_found;
 
 
-    Alist alist[8];
+    Alist alist[9];
     alist[0] = make_alist("object",   ID_UNK,    NULL, &ob);
     alist[1] = make_alist("filename", ID_STRING, NULL, &filename);
     alist[2] = make_alist("type",     ID_ENUM,   NULL, &type);
@@ -41,7 +42,8 @@ ff_write(vfuncptr func, Var *arg)
     alist[4] = make_alist("force",    INT,       NULL, &force);
     alist[5] = make_alist("separator",ID_STRING, NULL, &separator);
     alist[6] = make_alist("header",   INT,       NULL, &header);
-    alist[7].name = NULL;
+    alist[7] = make_alist("old_hdf",  INT,       NULL, &old_hdf);
+    alist[8].name = NULL;
 
     if (parse_args(func, arg, alist) == 0) return(NULL);
 
@@ -121,7 +123,7 @@ ff_write(vfuncptr func, Var *arg)
 
         /* Byte-swap data first */
         /* force ? */
-        WriteHDF5(-1, filename, ob);
+        WriteHDF5(-1, filename, ob, old_hdf);
     }
 #endif
 
