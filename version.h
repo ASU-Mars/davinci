@@ -1,8 +1,13 @@
-char *version = "@(#) daVinci Version #2.17";
+char *version = "@(#) daVinci Version #2.19";
 
 #include "build.h"
 
 /*
+  Version 2.19: Tue Jun 27 09:22:36 MST 2017
+  * External distribution.
+  * HDF5 I/O changes to allow writing HDF datasets with axes
+    ordered in standard order.
+  
   Version 2.17: Tue Apr  7  9:22:05 MST 2015
   * External distribution.
   * Completed reading/parsing of ISIS3 files.
