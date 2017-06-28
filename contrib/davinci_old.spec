@@ -22,67 +22,29 @@
 ##  OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 ##  SUCH DAMAGE.
 ##
-AutoReqProv: no
+
 #   package information
 Name:         davinci
-Summary:      Davinci - A tool to manipulate and view various types of data, developed by Mars Space Flight Facility
+Summary:      Davinci - A tool to manipulate and view various types of data, developed in Mars Space Flight Facility
 URL:          http://davinci.asu.edu
 Vendor:       Mars Space Flight Facility at Arizona State University
 Packager:     Davinci Devs <davinci-dev@mars.asu.edu>  
-Distribution: CentOS 0%{?rhel} (MSFF)
+Distribution: CentOS 5 (MSFF)
 Group:        Applications/Science
 License:      GPLv2
-Version:      2.18
-Release:      1%{dist}
+Version:      2.0
+Release:      1
 
-# This was generated using the following process:
-# svn checkout http://oss.mars.asu.edu/svn/davinci/davinci/tags/dv_2_17/ davinci-2.17
-# tar czf davinci-2.17.tar.gz davinci-2.17 --exclude=*.svn
-Source:      %{name}-%{version}.tar.gz
-
-# This is needed to fix undefined references to lzma_ functions from libdavinci.so
-Patch1: davinci-autoconf-lzma.patch
+#   list of sources
+Source:      ftp://ftp.mars.asu.edu/pub/software/davinci/%{name}-%{version}.tar.gz
 
 #   build information
-BuildRequires: automake
-BuildRequires: autoconf
-BuildRequires: make
-BuildRequires: gcc
-BuildRequires: gcc-c++
-BuildRequires: hdf5
-BuildRequires: hdf5-devel 
-BuildRequires: cfitsio
-BuildRequires: cfitsio-devel
-BuildRequires: readline
-BuildRequires: readline-devel
-BuildRequires: zlib
-BuildRequires: zlib-devel
-BuildRequires: curl-devel
-BuildRequires: libxml2-devel
-
-%if 0%{?rhel} <= 6
-BuildRequires: lzma-devel
-%endif
-
-%if 0%{?rhel} >= 7
-BuildRequires: xz-devel
-%endif
-
+BuildPreReq:  automake, autoconf, make, gcc, gcc-c++, hdf5, hdf5-devel, cfitsio, cfitsio-devel, readline, readline-devel, zlib, zlib-devel, curl-devel	
 BuildRoot: %{_tmppath}/%{name}-%{version}-buildroot
-
-Requires: gnuplot
-Requires: hdf5
-Requires: hdf5-devel
-Requires: cfitsio
-Requires: readline
-Requires: zlib
-Requires: libxml2
-Requires: libXmu-devel
-Requires: libtool-ltdl-devel
-Requires: openmotif-devel
-Requires: compat-libf2c-34
-#Requires: isis2
-
+Requires:	gnuplot, hdf5, hdf5-devel, cfitsio, readline, zlib
+#Provides:     
+#Obsoletes:    
+#Conflicts:    
 Prefix: %_prefix
 
 %description
@@ -95,8 +57,6 @@ Prefix: %_prefix
 %prep
 
 %setup -q
-%patch1 -p1
-autoconf -f
 
 %build
 #Iomedley
@@ -106,9 +66,12 @@ make
 cd ../
 
 #Davinci
-./configure --prefix=%{_prefix} --libdir=%{_libdir} --with-libxml2=%{_includedir}  --with-viewer=%{_bindir}/display \
---with-modpath=%{_libdir}/%{name} --with-help=%{_datadir}/%{name}/docs/dv.gih --with-cfitsio=%{_includedir}/cfitsio
+./configure --prefix=%{_prefix} --libdir=%{_libdir} --disable-libisis   --with-viewer=/usr/bin/display \
+--with-modpath=%{_libdir}/%{name} --with-help=%{_datadir}/%{name}/docs/dv.gih
+
+
 make
+
 
 %define __spec_install_post %{nil}
 %define debug_package %{nil}
@@ -131,25 +94,18 @@ rm -rf $RPM_BUILD_ROOT
  %{_datadir}/%{name}*
  %{_includedir}/%{name}*
 
+
+
+
+
 %post
 ##To avoid SELINUX  security message (maybe there is a better solution)
 chcon -f -t textrel_shlib_t %{_libdir}/libdavinci* > /dev/null 2>&1 || /bin/true
 
-%changelog
-* Mon Jun 22 2015 Nick Piacentine <npiace@mars.asu.edu> 2.17-3
-- Rebuilt with cleaned lzma patch.
+
  
-* Wed Apr 15 2015 Nick Piacentine <npiace@mars.asu.edu> 2.17-2
-- Rebuilt with libxml2 and libisis support
 
-* Tue Apr 14 2015 Nick Piacentine <npiace@mars.asu.edu> 2.17-1
-- Rebuilt for davinci-2.17
-
-* Tue Oct 14 2014 Nick Piacentine <npiace@mars.asu.edu> 2.16-1
-- Updated SPEC file to use BuildRequires
-- Added lzma-devel requirement for build.
-- Added patch to build with lzma
-
+%changelog
 * Tue Jul 10 2007 Betim Deva <betim@asu.edu> 1.6.8-1
 - Created the SPEC file
 
