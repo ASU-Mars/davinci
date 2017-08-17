@@ -252,7 +252,7 @@ if test "x$have_libhdf" = "xyes"; then
 	AC_DEFINE(H5_USE_16_API, 1, [use HDF5 1.6 API])
 fi
 
-
+AC_CHECK_LIB(lzma,lzma_code)
 
 AC_CHECK_LIB([curl],[curl_easy_init])
 
