@@ -259,7 +259,7 @@ static int load_node(xmlNodePtr nptr, Var *v, int use_names)
                 node_name = get_name(nptr);
                 if (node_name == NULL)
                 {
-                    return 0;
+					node_name = gen_next_unused_name_instance(node_name, v);
                 }
                 is_table_bin = 1;
             }
