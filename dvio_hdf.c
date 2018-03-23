@@ -275,6 +275,8 @@ dataset_attr_iter(hid_t parent, const char *attr_name, void *iter_data)
 	return 1; // immediately return
 }
 
+#define FILL(array,val) { int _n=sizeof(array)/sizeof((array)[0]); int _i; for(_i=0; _i<_n; _i++){ (array)[_i]=(val); } }
+
 /**
  * Make a VAR out of a HDF5 object
  * iter_data is of type dv_h5_group_iter_data
@@ -287,6 +289,7 @@ group_iter(hid_t parent, const char *name, void *iter_data)
     int type, size[3],  dsize, i;
     int var_type;
     hsize_t datasize[3], maxsize[3];
+    int ndims = 0;
     H5T_class_t classtype;
     Var *v = NULL;
     void *databuf, *databuf2;
@@ -295,6 +298,10 @@ group_iter(hid_t parent, const char *name, void *iter_data)
 	dv_h5_dataset_attr_iter_data attr_info;
 	int nattr, j, k;
 	int old_hdf;
+
+    FILL(size,1);
+    FILL(datasize,1);
+    FILL(maxsize,1);
 
     ((dv_h5_group_iter_data *)iter_data)->data = NULL;
 
@@ -371,9 +378,10 @@ group_iter(hid_t parent, const char *name, void *iter_data)
         if ((type!=ID_STRING)){
 
             dataspace = H5Dget_space(dataset);
+            ndims = H5Sget_simple_extent_ndims(dataspace); // TODO bail if ndims > 3
             H5Sget_simple_extent_dims(dataspace, datasize, maxsize);
-            for (i = 0 ; i < 3 ; i++) {
-				size[i] = datasize[i];
+            for (i = 0 ; i < ndims ; i++) {
+                size[ndims-1-i] = datasize[ndims-1-i];
             }
             dsize = H5Sget_simple_extent_npoints(dataspace);
             databuf = calloc(dsize, NBYTES(type));
@@ -431,7 +439,10 @@ group_iter(hid_t parent, const char *name, void *iter_data)
 				}
 			}
             if (!old_hdf) {
-				int_swap(size[2],size[0]);
+                /* flip dimensions; HDF dimenions have the fastest changing element last */
+                for(i=0;i<(ndims/2);i++){
+                    int_swap(size[ndims-1-i],size[i]);
+                }
             }
 
             v = newVal(attr_info.org, size[0], size[1], size[2], type, databuf);
@@ -450,9 +461,10 @@ group_iter(hid_t parent, const char *name, void *iter_data)
             }
 
             dataspace = H5Dget_space(dataset);
+            ndims = H5Sget_simple_extent_ndims(dataspace);
             H5Sget_simple_extent_dims(dataspace, datasize, maxsize);
-            for (i = 0 ; i < 3 ; i++) {
-                size[i] = datasize[i];
+            for (i = 0 ; i < ndims ; i++) {
+                size[ndims-1-i] = datasize[ndims-1-i];
             }
 /*       	dsize = H5Sget_simple_extent_npoints(dataspace);*/
             dsize = H5Tget_size(datatype);
