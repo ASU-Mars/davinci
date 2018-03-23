@@ -597,7 +597,7 @@ evaluate(Var * n)
 
             // Support for help
             if (strcmp((V_NAME(p2)), MODULE_HELP) == 0) {
-                sprintf(module_help, getenv("DV_MOD_PATH"));
+                sprintf(module_help, "%s", getenv("DV_MOD_PATH"));
 
 /*
 ** This will never work.
