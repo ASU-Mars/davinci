@@ -1,7 +1,7 @@
 # verify that the file dump is as expected, i.e. all attributes are there with right values
 
 rc=system("h5dump ../../data/234_new.hdf > "+$TMPDIR+"/foo.txt")
-rc+=system("cmp -s ../../data/234_new.hdf.dump.txt "+$TMPDIR+"/foo.txt")
+rc+=system("sdiff -b -s ../../data/234_new.hdf.dump.txt "+$TMPDIR+"/foo.txt")
 
 if (rc > 0){
 	exit(1)
