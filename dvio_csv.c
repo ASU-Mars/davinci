@@ -1378,6 +1378,7 @@ dv_WriteCSV(Var* the_data, char* filename, char* field_delim, int header, int fo
 	if( error ) {
 		free(keys);
 		free(data);
+		return 0; 
 	}
 
 	for(i=0; i<count; i++) {
@@ -1440,7 +1441,9 @@ dv_WriteCSV(Var* the_data, char* filename, char* field_delim, int header, int fo
 			 *
 			 * The change is to %.4f from %G for FLOAT,
 			 *                  %.1f from %G for DOUBLE
-			 *
+			 * 
+			 * The new change is from %.4f to %.7G  for FLOAT 
+			 *                        %.1f to %.12G for DOUBLE 
 			 */
 
 			if( V_TYPE(data[i]) == ID_VAL ) {
@@ -1451,9 +1454,9 @@ dv_WriteCSV(Var* the_data, char* filename, char* field_delim, int header, int fo
 						case BYTE:		fprintf(file, "%u", ((unsigned char*)V_DATA(data[i]))[row*columns+j] );	break;
 						case SHORT:		fprintf(file, "%d", ((short*)V_DATA(data[i]))[row*columns+j] );			break;
 						case INT:		fprintf(file, "%d", ((int*)V_DATA(data[i]))[row*columns+j] );			break;
-						case FLOAT:		fprintf(file, "%.4f", ((float*)V_DATA(data[i]))[row*columns+j] );		break;
+						case FLOAT:		fprintf(file, "%.7G", ((float*)V_DATA(data[i]))[row*columns+j] );		break;
 					  //case FLOAT:		fprintf(file, "%G", ((float*)V_DATA(data[i]))[row*columns+j] );			break;
-						case DOUBLE:	fprintf(file, "%.1f", ((double*)V_DATA(data[i]))[row*columns+j] );		break;
+						case DOUBLE:	fprintf(file, "%.12G", ((double*)V_DATA(data[i]))[row*columns+j] );		break;
 					 // case DOUBLE:	fprintf(file, "%G", ((double*)V_DATA(data[i]))[row*columns+j] );		break;
 						default:
 							parse_error("unknown format for ID_VAL: %d\n", V_FORMAT(data[i]));
