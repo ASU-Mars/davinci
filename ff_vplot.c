@@ -1438,7 +1438,7 @@ int plot_chopper(Var **av, int start_ct, int end_ct, int Onum, char *CommandBuff
               break;
           	  case FLOAT:
           	  case DOUBLE:
-          		  fprintf(fp, "%f\t %f\n", x[k], yval);
+          		  fprintf(fp, "%g\t %g\n", x[k], yval); //Using %f here creates the stair case error. %g creates a smooth curve
           }
 
 	    } else {
@@ -1453,7 +1453,7 @@ int plot_chopper(Var **av, int start_ct, int end_ct, int Onum, char *CommandBuff
               break;
         	  case FLOAT:
         	  case DOUBLE:
-        		  fprintf(fp, "%f\t %f\t %f\n", x[k], yval, Err1[k]);
+        		  fprintf(fp, "%g\t %g\t %g\n", x[k], yval, Err1[k]);
         }
 
 
@@ -1472,7 +1472,7 @@ int plot_chopper(Var **av, int start_ct, int end_ct, int Onum, char *CommandBuff
           break;
       	  case FLOAT:
       	  case DOUBLE:
-      		fprintf(fp, "%f\t %f\t %f\t %f\n", x[k], yval, e1, e2);
+      		fprintf(fp, "%g\t %g\t %g\t %g\n", x[k], yval, e1, e2);
       }
 
 	      } else {
@@ -1489,7 +1489,7 @@ int plot_chopper(Var **av, int start_ct, int end_ct, int Onum, char *CommandBuff
 		      	  break;
 		      	  case FLOAT:
 		      	  case DOUBLE:
-		      		fprintf(fp, "%f\t %f\t %f\t %f\t %f\t %f\n", x[k], yval, Err1[k], Err2[k], e1, e2);
+		      		fprintf(fp, "%g\t %g\t %g\t %g\t %g\t %g\n", x[k], yval, Err1[k], Err2[k], e1, e2);
 		      }
 	      }
 	    }
