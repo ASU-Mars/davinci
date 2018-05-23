@@ -1,8 +1,15 @@
-char *version = "@(#) daVinci Version #2.19";
+char *version = "@(#) daVinci Version #2.20";
 
 #include "build.h"
 
 /*
+  Version 2.20: Wed May 23 15:19:23 MST 2018
+  * External distribution.
+  * Fixes to read/write of CSV files.
+	1. Segmentation fault when writing CSV files.
+	2. Loss of decimal resolution when writing CSV files.
+  * plot() produces stair-stepped plots for values in the 10-5 range.
+  
   Version 2.19: Tue Jun 27 09:22:36 MST 2017
   * External distribution.
   * HDF5 I/O changes to allow writing HDF datasets with axes
