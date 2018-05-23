@@ -1,0 +1,12 @@
+a = load_csv("../../data/sst14_rwa_speeds_with_sclks.csv", delim=",")
+write(a, $TMPDIR+"/csvtest.csv", csv, header=1)
+if( fexists($TMPDIR+"/csvtest.csv")  ){
+	b = load_csv($TMPDIR+"/csvtest.csv") 
+			
+	if( equals(a,b) ) { 
+		fremove($TMPDIR+"/csvtest.csv")
+		exit(0); 
+	} 
+	fremove($TMPDIR+"/csvtest.csv")
+}
+exit(1); 

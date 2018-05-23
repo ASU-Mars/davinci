@@ -1,0 +1,7 @@
+csv = foo { foo = create(1,1,140), bar = create(1,1,140) { 
+rc = write(a, $TMPDIR + "/test.csv", csv, header=1)
+if( fexists($TMPDIR+"/test.fits")  ) {
+	fremove($TMPDIR+"/test.csv")
+	exit(1); 
+}
+exit(0); 
