@@ -1,8 +1,11 @@
-char *version = "@(#) daVinci Version #2.20";
+char *version = "@(#) daVinci Version #2.21";
 
 #include "build.h"
 
 /*
+  Version 2.21: Fri Jun 1 14:55:11 MST 2018
+  * x_plot() now produces smooth stair-stepped plots for values in the 10-5 range.
+  
   Version 2.20: Wed May 23 15:19:23 MST 2018
   * External distribution.
   * Fixes to read/write of CSV files.
