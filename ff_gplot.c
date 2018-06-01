@@ -19,17 +19,17 @@ Var *ff_gplot(vfuncptr func, Var * arg)
     int i;
     FILE *fp = NULL;
     char *fname = NULL;
-    float g_xlow = MAXFLOAT;
-    float g_xhigh = MAXFLOAT;
-    float g_ylow = MAXFLOAT;
-    float g_yhigh = MAXFLOAT;
+    double g_xlow = MAXFLOAT;
+    double g_xhigh = MAXFLOAT;
+    double g_ylow = MAXFLOAT;
+    double g_yhigh = MAXFLOAT;
 
     Alist alist[6];
     alist[0] = make_alist("object", ID_VAL, NULL, &object);
-    alist[1] = make_alist("xlow", FLOAT, NULL, &g_xlow);
-    alist[2] = make_alist("xhigh", FLOAT, NULL, &g_xhigh);
-    alist[3] = make_alist("ylow", FLOAT, NULL, &g_ylow);
-    alist[4] = make_alist("yhigh", FLOAT, NULL, &g_yhigh);
+    alist[1] = make_alist("xlow", DOUBLE, NULL, &g_xlow);
+    alist[2] = make_alist("xhigh", DOUBLE, NULL, &g_xhigh);
+    alist[3] = make_alist("ylow", DOUBLE, NULL, &g_ylow);
+    alist[4] = make_alist("yhigh", DOUBLE, NULL, &g_yhigh);
     alist[5].name = NULL;
 
     if (parse_args(func, arg, alist) == 0)
@@ -201,8 +201,8 @@ Var *ff_splot(vfuncptr func, Var * arg)
   char  *label=NULL;
   int    ac;
   Var  **av;
-  float  xscale = 0;
-  float  yscale = 0;
+  double  xscale = 0;
+  double  yscale = 0;
   
   make_args(&ac, &av, func, arg);
   /* make_args puts func->name into av[0] and ac == 2 */
@@ -239,9 +239,9 @@ Var *ff_splot(vfuncptr func, Var * arg)
 	    if(V_TYPE(V_KEYVAL(s)) == ID_VAL) {
 	      v = V_KEYVAL(s);
 	      if(V_FORMAT(v)==BYTE || V_FORMAT(v)==INT || V_FORMAT(v)==SHORT) {
-		xscale = (float)extract_int(v,0);
+		xscale = (double)extract_int(v,0);
 	      } else if(V_FORMAT(v)==FLOAT || V_FORMAT(v)==DOUBLE) {
-		xscale = extract_float(v,0);
+		xscale = extract_double(v,0);
 	      }
 	    }
 	  }
@@ -252,9 +252,9 @@ Var *ff_splot(vfuncptr func, Var * arg)
 	    if(V_TYPE(V_KEYVAL(s)) == ID_VAL) {
 	      v = V_KEYVAL(s);
 	      if(V_FORMAT(v)==BYTE || V_FORMAT(v)==INT || V_FORMAT(v)==SHORT) {
-		yscale = (float)extract_int(v,0);
+		yscale = (double)extract_int(v,0);
 	      } else if(V_FORMAT(v)==FLOAT || V_FORMAT(v)==DOUBLE) {
-		yscale = extract_float(v,0);
+		yscale = extract_double(v,0);
 	      }
 	    }
 	  }
@@ -302,9 +302,9 @@ Var *ff_splot(vfuncptr func, Var * arg)
 	  case FLOAT:
 	  case DOUBLE:
 	    if(xscale != 0 && yscale != 0) {
-	      fprintf(fp, "%g %g %.12g\n",(int)((i%s0)+1)*xscale, (int)((i/s0)+1)*yscale, extract_float(v,i));
+	      fprintf(fp, "%g %g %.12g\n",(int)((i%s0)+1)*xscale, (int)((i/s0)+1)*yscale, extract_double(v,i));
 	    } else {
-	      fprintf(fp, "%d %d %.12g\n",(i%s0)+1, (i/s0)+1, extract_float(v,i));
+	      fprintf(fp, "%d %d %.12g\n",(i%s0)+1, (i/s0)+1, extract_double(v,i));
 	    }
 	    break;
 	  }
@@ -416,7 +416,7 @@ Var *ff_xplot(vfuncptr func, Var * arg)
     int xFlag = 0;
     char *Axis = NULL;
     int obj_index;
-    float *x, *y;
+    double *x, *y;
     int i, j, k;
     int idx;
     int Sep = 0;
@@ -426,7 +426,7 @@ Var *ff_xplot(vfuncptr func, Var * arg)
     int ac;
     int argcount = 0;
     Var **av;
-    float ignore;
+    double ignore;
     int iflag = 0;
 
     make_args(&ac, &av, func, arg);     /*chop up the args into an array */
@@ -455,7 +455,7 @@ Var *ff_xplot(vfuncptr func, Var * arg)
                 Sep = 1;
             } else if (!(strcmp(av[i]->name, "ignore"))) {
                 if (V_KEYVAL(av[i]) != NULL) {
-                    ignore = extract_float(V_KEYVAL(av[i]), 0);
+                    ignore = extract_double(V_KEYVAL(av[i]), 0);
                     iflag = 1;
                 } else {
                     parse_error("Bad value for ignore");
@@ -595,8 +595,8 @@ Var *ff_xplot(vfuncptr func, Var * arg)
                         return (NULL);
                     }
                 }
-                x = calloc(Ord[Mode[0]], sizeof(float));
-                y = calloc(Ord[Mode[0]], sizeof(float));
+                x = calloc(Ord[Mode[0]], sizeof(double));
+                y = calloc(Ord[Mode[0]], sizeof(double));
 
                 for (i = 0; i < Ord[Mode[2]]; i++) {
                     for (j = 0; j < Ord[Mode[1]]; j++) {
@@ -623,12 +623,12 @@ Var *ff_xplot(vfuncptr func, Var * arg)
                             case BYTE:
                             case SHORT:
                             case INT:
-                                y[k] = (float) extract_int(v, obj_index);
+                                y[k] = (double) extract_int(v, obj_index);
                                 break; // drd added -- break was missing
 
                             case FLOAT:
                             case DOUBLE:
-                                y[k] = extract_float(v, obj_index);
+                                y[k] = extract_double(v, obj_index);
                             }
 
                             if (xFlag) {
@@ -637,7 +637,7 @@ Var *ff_xplot(vfuncptr func, Var * arg)
                                 case SHORT:
                                 case INT:
                                     x[k] =
-                                        (float) extract_int(Xaxis,
+                                        (double) extract_int(Xaxis,
                                                             rpos(obj_index,
                                                                  v,
                                                                  Xaxis));
@@ -645,12 +645,12 @@ Var *ff_xplot(vfuncptr func, Var * arg)
                                 case FLOAT:
                                 case DOUBLE:
                                     x[k] =
-                                        extract_float(Xaxis,
+                                        extract_double(Xaxis,
                                                       rpos(obj_index, v,
                                                            Xaxis));
                                 }
                             } else {
-                                x[k] = (float) k;
+                                x[k] = (double) k;
                             }
                             if (iflag == 0
                                 || (x[k] != ignore && y[k] != ignore)) {
@@ -673,7 +673,7 @@ Var *ff_xplot(vfuncptr func, Var * arg)
                                     break;
                                 case FLOAT:
                                 case DOUBLE:
-                                	fprintf(fp, "%f\t %f\n", x[k], y[k]);
+                                	fprintf(fp, "%.12g\t %.12g\n", x[k], y[k]);
                                 }
 
                             }
@@ -743,7 +743,7 @@ Var *ff_xplot2(vfuncptr func, Var * arg)
     int xFlag = 0;
     char *Axis = NULL;
     int obj_index;
-    float *x, *y;
+    double *x, *y;
     int i, j, k;
     int idx;
     int Sep = 0;
@@ -752,7 +752,7 @@ Var *ff_xplot2(vfuncptr func, Var * arg)
 
     int ac;
     Var **av;
-    float ignore;
+    double ignore;
     int iflag = 0;
 
 
@@ -782,7 +782,7 @@ Var *ff_xplot2(vfuncptr func, Var * arg)
                 Sep = 1;
             } else if (!(strcmp(av[i]->name, "ignore"))) {
                 if (V_KEYVAL(av[i]) != NULL) {
-                    ignore = extract_float(V_KEYVAL(av[i]), 0);
+                    ignore = extract_double(V_KEYVAL(av[i]), 0);
                     iflag = 1;
                 } else {
                     parse_error("Bad value for ignore");
@@ -920,8 +920,8 @@ Var *ff_xplot2(vfuncptr func, Var * arg)
                 // It's unclear why these are arrays. 
                 // It doesn't appear that the values are used
                 // outside of the for loop.
-                x = calloc(Ord[Mode[0]], sizeof(float));
-                y = calloc(Ord[Mode[0]], sizeof(float));
+                x = calloc(Ord[Mode[0]], sizeof(double));
+                y = calloc(Ord[Mode[0]], sizeof(double));
 
                 for (i = 0; i < Ord[Mode[2]]; i++) {
                     for (j = 0; j < Ord[Mode[1]]; j++) {
@@ -948,11 +948,11 @@ Var *ff_xplot2(vfuncptr func, Var * arg)
                             case BYTE:
                             case SHORT:
                             case INT:
-                                y[k] = (float) extract_int(v, obj_index);
+                                y[k] = (double) extract_int(v, obj_index);
                                 break; // drd added -- break was missing
                             case FLOAT:
                             case DOUBLE:
-                                y[k] = extract_float(v, obj_index);
+                                y[k] = extract_double(v, obj_index);
                             }
 
                             if (xFlag) {
@@ -961,7 +961,7 @@ Var *ff_xplot2(vfuncptr func, Var * arg)
                                 case SHORT:
                                 case INT:
                                     x[k] =
-                                        (float) extract_int(Xaxis,
+                                        (double) extract_int(Xaxis,
                                                             rpos(obj_index,
                                                                  v,
                                                                  Xaxis));
@@ -969,12 +969,12 @@ Var *ff_xplot2(vfuncptr func, Var * arg)
                                 case FLOAT:
                                 case DOUBLE:
                                     x[k] =
-                                        extract_float(Xaxis,
+                                        extract_double(Xaxis,
                                                       rpos(obj_index, v,
                                                            Xaxis));
                                 }
                             } else {
-                                x[k] = (float) k;
+                                x[k] = (double) k;
                             }
                             if (iflag && x[k] != ignore && y[k] != ignore) {
                                 fprintf(fp, "%g\t %g\n", x[k], y[k]);
