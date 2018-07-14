@@ -468,7 +468,7 @@ group_iter(hid_t parent, const char *name, void *iter_data)
             }
 /*       	dsize = H5Sget_simple_extent_npoints(dataspace);*/
             dsize = H5Tget_size(datatype);
-            databuf = (unsigned char *)calloc(dsize, sizeof(char));
+            databuf = (unsigned char *)calloc(dsize+1, sizeof(char));
             H5Dread(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, databuf);
             if (Lines==1)
                 V_STRING(v)=databuf;
