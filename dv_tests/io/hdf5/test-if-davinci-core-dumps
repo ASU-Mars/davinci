@@ -1,0 +1,12 @@
+system("ulimit -Sc unlimited")
+#NOTE: Loading the file 3 times will cause a core dump
+a = load("../../data/20170925T042136S764_ote_L0_V001.hdf")
+a = load("../../data/20170925T042136S764_ote_L0_V001.hdf")
+a = load("../../data/20170925T042136S764_ote_L0_V001.hdf")
+b = syscall("ls core.*")
+if(hasvalue(b)){
+	system("ulimit -Sc 0")
+	syscall("rm -f core.*")
+	exit(1)
+}
+exit(0)
