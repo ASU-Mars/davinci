@@ -1,0 +1,13 @@
+#test the pack function
+#remove existing foo.bin
+syscall("rm -f /tmp/foo.bin")
+spstruct = load("../../data/pack-input.hdf")
+if(hasvalue(spstruct)){
+	pack(spstruct, "a1024", "/tmp/foo.bin", col_names="sma_label", 438, force=1)
+	b = syscall("ls /tmp/foo.bin")
+	if(hasvalue(b)){
+		syscall("rm -f /tmp/foo.bin")
+		exit(0)
+	}
+}
+exit(1) #failure
