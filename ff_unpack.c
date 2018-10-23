@@ -1358,9 +1358,11 @@ ff_pack(vfuncptr func, Var* arg)
 	// count negative, pack computed rows.
 	// count zero, return error (see above).
 	// count positive, pack that amount (write null chars for rows which do not exist).
-    rows = count > 0? count: rows;
-	if (pack(reg_data, template, filename, num_items, rows, skip)) {
+    	rows = count > 0? count: rows;
+	int warning;
+	if (warning = pack(reg_data, template, filename, num_items, rows, skip)) {
 		parse_error("Packed %d records to to %s.", rows, filename);
+		if (warning == 2) parse_error("Column \"%s\" has been truncated.", V_STRING(column_names));
 	}
 
 	cleanup_data(reg_data, num_items); // clean memory for reg_data
@@ -1548,6 +1550,7 @@ pack(data* thedata, char* template, char* filename, int numData, int rows, int o
 	unpack_digest* digest = NULL;
 	FILE* file = NULL;
 	byte* buffer = NULL;
+	int pr;
 
 	// check thedata argument, can't pack what doesn't exist
 	if(thedata == NULL) {
@@ -1628,7 +1631,7 @@ pack(data* thedata, char* template, char* filename, int numData, int rows, int o
 		memset(buffer, '\0', rec_length);
 
 		// write data into buffer
-		if (!pack_row(thedata, digest, i, buffer)){
+		if (!(pr = pack_row(thedata, digest, i, buffer))){
 			parse_error("Error in writing data to buffer");
 			clean_up(2, digest, buffer, thedata, file);
 			return 0; // NULL;
@@ -1646,6 +1649,8 @@ pack(data* thedata, char* template, char* filename, int numData, int rows, int o
 	free(buffer);
 	free(digest);
 	fclose(file);
+
+	if (pr == 2) return 2; //return warning
 
 	return 1; // return success
 }
@@ -1697,7 +1702,7 @@ convert_to_ext_fmt(char *from, int ffmt, char *to, int tfmt, int tolen){
         case INT:       sprintf(str,"%d",si); break;
         case FLOAT:
         case DOUBLE:    sprintf(str,"%g",d); break;
-        case ID_STRING: sprintf(str,"%s",from); break;
+        case ID_STRING: sprintf(str,"%.*s",tolen,from); break;
         default:        return 0;
         }
     }
@@ -1752,6 +1757,8 @@ convert_to_ext_fmt(char *from, int ffmt, char *to, int tfmt, int tolen){
         return 0;
     }
 
+    if (tolen < strlen(from)) return 2;
+
     return 1;
 }
 
@@ -1769,7 +1776,7 @@ pack_row(data* the_data, unpack_digest* digest, int row, byte* buffer) {
 	char letter;
 	char *src_buf;
 	int src_type, src_columns;
-
+	int ctef;
 
 	// start for loop through unpack_digest's input
 	for(j = 0; j < digest->num_items; j++) {
@@ -1794,12 +1801,14 @@ pack_row(data* the_data, unpack_digest* digest, int row, byte* buffer) {
 			else {
 				src_buf = the_data[j].array + row * src_columns * NBYTES(src_type) + k * NBYTES(src_type);
 			}
-			if (!convert_to_ext_fmt(src_buf, src_type, &buffer[start_byte + k*numbytes], letter, numbytes)){
+			if (!(ctef = convert_to_ext_fmt(src_buf, src_type, &buffer[start_byte + k*numbytes], letter, numbytes))){
 				fprintf(stderr, "Unable to convert column %d (index %d)\n", j, k);
 				return 0;
 			}
 		}
 	}//end for num_items
+	
+	if(ctef == 2) return 2;
 
 	return 1;
 }
