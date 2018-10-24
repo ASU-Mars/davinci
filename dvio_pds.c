@@ -2027,15 +2027,33 @@ rfTable(dataKey *objSize, Var * ob, LABEL *label){
 	}
 	else {
 		lseek(fd, Offset, SEEK_SET);
-
+		char* tmp = (char*)calloc(1, sizeof(char));
 		for (i = 0; i < label->nrows && rc; i++) {
 			/*Read each row as a block */
 			if ((err = read(fd, tmpbuf, label->reclen)) != label->reclen) {
-				fprintf(stderr, "Short file: %s. Read %d bytes, should be %d\n",
-					fileName, err, label->reclen);
-				rc=0;
+				if ( (i == (label->nrows-1)) && (err == (label->reclen-1))) { /* Case where last line has no '\n' */	
+					for (j = 0; j < num_items; j++) {
+						/*Place in the approiate buffer */
+						memcpy((bufs[j] + i * size[j]), (tmpbuf + f[j]->start), size[j]);
+						if (f[j]->eformat == MSB_BIT_FIELD)
+							rfBitField(&j, bufs, tmpbuf, f, f[j]->start, i, size, num_items);
+					}
+				}
+				else {
+					fprintf(stderr, "Short file: %s. Read %d bytes, should be %d\n",
+						fileName, err, label->reclen);
+					rc=0;
+				}
 			}
 			else {
+				if (tmpbuf[label->reclen-1] == '\r') {
+					int err2 = read(fd, tmp, 1);
+					if(*tmp != '\n') lseek(fd, -1, SEEK_CUR);
+				}
+				else if (tmpbuf[label->reclen-1] == '\n') {
+					int err2 = read(fd, tmp, 1);
+					if(*tmp != '\r') lseek(fd, -1, SEEK_CUR);
+				}
 				for (j = 0; j < num_items; j++) {
 					/*Place in the approiate buffer */
 					memcpy((bufs[j] + i * size[j]), (tmpbuf + f[j]->start), size[j]);
@@ -2044,7 +2062,7 @@ rfTable(dataKey *objSize, Var * ob, LABEL *label){
 				}
 			}
 		}
-
+		free(tmp);
 		close(fd);
 	}
 

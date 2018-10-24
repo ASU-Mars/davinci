@@ -16,7 +16,7 @@ char pp_input_buf[8192];
 FILE *lfile = NULL;
 FILE *pfp = NULL;
 
-int SCALE = 6;
+int SCALE = 7;
 int VERBOSE = 2;
 int DEPTH = 2;
 
