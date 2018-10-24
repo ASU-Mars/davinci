@@ -1,0 +1,8 @@
+a = load_pds("../../data/th_2x2.lbl")
+b = a.thorium_concentration_data.data
+if(HasValue(b)) {
+	if( (b.latitude[,2,] == -87) && (b.latitude[,15840,] == 87) && (b.longitude[,15840,]==359) ) {
+		exit(0)	
+	}
+}
+exit(1)
