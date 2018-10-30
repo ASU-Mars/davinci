@@ -1682,11 +1682,13 @@ ff_syscall(vfuncptr func, Var * arg)
   char **text;
   int Row=0;
   int Max=100;
+  int maxlinecount = 0;
   char *ptr;
 
-  Alist alist[2];
-  alist[0] = make_alist("command",    ID_STRING,     NULL,     &expr);
-  alist[1].name = NULL;
+  Alist alist[3];
+  alist[0] = make_alist("command",      ID_STRING,     NULL,     &expr);
+  alist[1] = make_alist("maxlinecount", INT,	       NULL,     &maxlinecount);
+  alist[2].name = NULL;
 
   if (parse_args(func, arg, alist) == 0) return(NULL);
 
@@ -1697,8 +1699,10 @@ ff_syscall(vfuncptr func, Var * arg)
   if ((fp=popen(expr,"r"))==NULL)
     return(NULL);
 
+  if (maxlinecount <= 0) maxlinecount = 1000000;
+
   text=(char **)calloc(Max,sizeof(char *));
-  while(dv_getline(&ptr, fp) != EOF) {
+  while(dv_getline(&ptr, fp, maxlinecount) != EOF) {
     if (Row >=Max){
       Max+=100;
       if((text=realloc(text,(Max*sizeof(char *))))==NULL){

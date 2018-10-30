@@ -271,7 +271,7 @@ char *ltrim(char *s, char *trim_chars);
 char *rtrim(char *s, char *trim_chars);
 char *fix_name(const char *input_name);
 
-int dv_getline(char **ptr, FILE *fp);
+int dv_getline(char **ptr, FILE *fp, int maxlinecount);
 
 /**
  ** All the internal functions are declared here.
