@@ -1771,9 +1771,58 @@ Max always returns a FLOAT.
 ?read_lines()
  read_lines() - Read text file into text array object
 
- read_lines(filename=STRING)
+ read_lines(filename=STRING, maxlinecount=INT)
 
   The read_lines() reads a text file and returns it as a TEXT array.
+  The maxlinecount parameter is used to increase the line count to read
+  longer text. The default is maxlinecount=1000000.     
+
+?functions read_text()
+?read_text()
+ read_text() - Read text file into a byte array
+
+ read_text(filename=STRING, maxlinecount=INT)
+
+  The read_text() reads a text file and returns it as a BYTE array.
+  The maxlinecount parameter is used to increase the line count to read
+  longer text. The default is maxlinecount=1000000.     
+
+?functions read_ascii()
+?read_ascii()
+ read_ascii() - Loads data from an ASCII columnar (matrix) file.
+ Identical to ascii(). The data is assumed to be BSQ organization.
+
+ read_ascii(filename = STRING, x = INT, y = INT,
+	    z = INT, format = TYPE, column = INT,
+	    row = INT, delim = STRING, maxlinecount = INT)
+
+  The read_ascii() reads the path and filename of a file containing
+  delimited numeric data and returns a matrix of numbers of
+  specified data type.
+
+  Pixel values on a line must be separated by at least one space or 
+  tab. Lines must be seperated by exactly 1 newline, and planes must
+  be separated by 1 blank line.
+
+  The only required keyword is 'filename'. If any of the X,Y,Z values
+  are omitted, they are assumed to be 1, in which case the file is 
+  pre-scanned to attempt to determine its size.
+
+  'Format' determines the output type of the data. TYPE is one of:
+  'byte', 'short', 'int', 'float', or 'double'. If format is omitted,
+  the default output type is INT. Floating point values cannot be
+  read using a type of 'byte', 'short', or 'int'.
+
+  The value 'row' specifies the number of lines to skip before reading
+  any data. The value 'column' specifies the number of values to skip
+  skip for every line read.
+
+  The 'delim' parameter defines the list of of column delimiters to
+  use. If this option is omitted, both TAB and SPACE are used as
+  delimiters. The value for 'delim' should always be enclosed in quotes.
+
+  The 'maxlinecount' parameter is used to specify to read longer text. If
+  this option is omitted, maxlinecount is assumed to be 1000000.
 
 ?functions dirname()
 ?dirname()
@@ -1847,10 +1896,12 @@ Max always returns a FLOAT.
 ?syscall()
  syscall() - system's call
  
- syscall(STRING)
+ syscall(STRING, maxlinecount=INT)
 
  syscall executes STRING in a command shell and returns any output
  in a TEXT object.
+ The maxlinecount parameter is used to increase the line count to read
+ longer text. The default is maxlinecount=1000000.     
 
 ?functions xrt3d()
 ?xrt3d()

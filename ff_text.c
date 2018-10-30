@@ -38,6 +38,7 @@ Var *ff_read_text(vfuncptr func, Var * arg)
 
   char *cdata;
   int count = 0;
+  int maxlinecount = 0;
 
   int j;
 
@@ -45,9 +46,10 @@ Var *ff_read_text(vfuncptr func, Var * arg)
   int x = 0;
   int y = 0;
 
-  Alist alist[2];
-  alist[0] = make_alist("filename", ID_STRING, NULL, &filename);
-  alist[1].name = NULL;
+  Alist alist[3];
+  alist[0] = make_alist("filename",	ID_STRING, NULL, &filename);
+  alist[1] = make_alist("maxlinecount", INT,	   NULL, &maxlinecount);
+  alist[2].name = NULL;
 
   if (parse_args(func, arg, alist) == 0)
     return (NULL);
@@ -57,6 +59,8 @@ Var *ff_read_text(vfuncptr func, Var * arg)
     parse_error(NULL);
     return (NULL);
   }
+
+  if (maxlinecount == 0) maxlinecount = 1000000;
 
   if ((fname = dv_locate_file(filename)) == NULL) {
     parse_error("Cannot find file: %s\n", filename);
@@ -72,7 +76,7 @@ Var *ff_read_text(vfuncptr func, Var * arg)
 
   x = y = 0;
   count = 0;
-  while (dv_getline(&ptr, fp) != EOF) {
+  while (dv_getline(&ptr, fp, maxlinecount) != EOF) {
     if ((int) strlen(ptr) > x)
       x = (int) strlen(ptr);
     y++;
@@ -84,7 +88,7 @@ Var *ff_read_text(vfuncptr func, Var * arg)
   cdata = (char *) calloc(dsize, sizeof(char));
 
   for (j = 0; j < y; j++) {
-    if ((rlen = dv_getline(&ptr, fp)) == -1)
+    if ((rlen = dv_getline(&ptr, fp, maxlinecount)) == -1)
       break;
     memcpy(cdata + (x * j), ptr, strlen(ptr));
   }
@@ -108,10 +112,12 @@ Var *ff_read_lines(vfuncptr func, Var * arg)
   int size;
   Var *o = NULL;
   int count;
+  int maxlinecount = 0;
 
-  Alist alist[2];
-  alist[0] = make_alist("filename", ID_STRING, NULL, &filename);
-  alist[1].name = NULL;
+  Alist alist[3];
+  alist[0] = make_alist("filename", 	ID_STRING, NULL, &filename);
+  alist[1] = make_alist("maxlinecount", INT,	   NULL, &maxlinecount);
+  alist[2].name = NULL;
 
   if (parse_args(func, arg, alist) == 0)
     return (NULL);
@@ -120,6 +126,8 @@ Var *ff_read_lines(vfuncptr func, Var * arg)
     parse_error("Expected filename");
     return (NULL);
   }
+
+  if (maxlinecount == 0) maxlinecount = 1000000;
 
   if ((fname = dv_locate_file(filename)) == NULL) {
     sprintf(error_buf, "Cannot find file: %s\n", filename);
@@ -136,7 +144,7 @@ Var *ff_read_lines(vfuncptr func, Var * arg)
   size = 64;
   t = calloc(size, sizeof(char *));
 
-  while ((rlen = dv_getline(&ptr, fp)) != EOF) {
+  while ((rlen = dv_getline(&ptr, fp, maxlinecount)) != EOF) {
     if (ptr[rlen - 1] == '\n')
       ptr[rlen - 1] = '\0';
     if (ptr[rlen - 2] == '\r')

@@ -1,7 +1,7 @@
 #include "parser.h"
 
 int 
-dv_getline(char **ptr, FILE *fp)
+dv_getline(char **ptr, FILE *fp, int maxlinecount)
 {
   static char *line=NULL;
   static size_t len=0;
@@ -26,9 +26,10 @@ dv_getline(char **ptr, FILE *fp)
     line = (char *)my_realloc(line, len*2+1);
     if ((fgets(line+len-1, len, fp)) == NULL) break;
     len = len*2-1;
-    if (len > 1000000) {
-      fprintf(stderr, "Line is at 1000000\n");
-	  *ptr = NULL;
+    if (len > maxlinecount) {
+      fprintf(stderr, "Line is at %d\n", maxlinecount);
+      fprintf(stderr, "Increase the maxlinecount parameter to read the file\n"); 
+      *ptr = NULL;
       return -1;
     }
   }
@@ -61,20 +62,22 @@ ff_ascii(vfuncptr func, Var *arg)
   int      format=0;
   int      column=0;
   int      row=0;
+  int      maxlinecount=0;
   const char    *formats[] = { "byte", "short", "int",
                                "float", "double", NULL };
   char    *format_str = NULL;
 
-  Alist alist[9];
-  alist[0] = make_alist( "filename",    ID_STRING,   NULL,    &filename);
-  alist[1] = make_alist( "x",    	INT,         NULL,    &x);
-  alist[2] = make_alist( "y",    	INT,         NULL,    &y);
-  alist[3] = make_alist( "z",    	INT,         NULL,    &z);
-  alist[4] = make_alist( "format",      ID_ENUM,     formats, &format_str);
-  alist[5] = make_alist( "column",      INT,         NULL,    &column);
-  alist[6] = make_alist( "row",    	INT,         NULL,    &row);
-  alist[7] = make_alist( "delim",       ID_STRING,   NULL,    &delim);
-  alist[8].name = NULL;
+  Alist alist[10];
+  alist[0] = make_alist( "filename",     ID_STRING,   NULL,    &filename);
+  alist[1] = make_alist( "x",    	 INT,         NULL,    &x);
+  alist[2] = make_alist( "y",    	 INT,         NULL,    &y);
+  alist[3] = make_alist( "z",    	 INT,         NULL,    &z);
+  alist[4] = make_alist( "format",       ID_ENUM,     formats, &format_str);
+  alist[5] = make_alist( "column",       INT,         NULL,    &column);
+  alist[6] = make_alist( "row",    	 INT,         NULL,    &row);
+  alist[7] = make_alist( "delim",        ID_STRING,   NULL,    &delim);
+  alist[8] = make_alist( "maxlinecount", INT,	      NULL,    &maxlinecount);
+  alist[9].name = NULL;
   
   if (parse_args(func, arg, alist) == 0) return(NULL);
   
@@ -82,6 +85,8 @@ ff_ascii(vfuncptr func, Var *arg)
     parse_error("No filename specified: %s()", func->name);
     return(NULL);
   }
+
+  if (maxlinecount == 0) maxlinecount = 1000000;
 
   if (format_str != NULL) {
     if (!strcasecmp(format_str, "byte")) format = BYTE;
@@ -113,14 +118,14 @@ ff_ascii(vfuncptr func, Var *arg)
     
     /* skip some rows */
     for (i = 0 ; i < row ; i ++) {
-      dv_getline(&ptr, fp);
+      dv_getline(&ptr, fp, maxlinecount);
       if (ptr == NULL) {
 	fprintf(stderr, "Early EOF, aborting.\n");
 	return(NULL);
       }
     }
     
-    while(dv_getline(&ptr, fp) != EOF) {
+    while(dv_getline(&ptr, fp, maxlinecount) != EOF) {
       if (ptr[0] == '\n') {
 	z++;
 	continue;
@@ -170,7 +175,7 @@ ff_ascii(vfuncptr func, Var *arg)
    ** Skip N rows.
    **/
   for (i = 0 ; i < row ; i ++) {
-    dv_getline(&ptr, fp);
+    dv_getline(&ptr, fp, maxlinecount);
     if (ptr == NULL) {
       fprintf(stderr, "Early EOF, aborting.\n");
       return(NULL);
@@ -181,12 +186,12 @@ ff_ascii(vfuncptr func, Var *arg)
       /**
        ** skip to end of block
        **/
-      while (dv_getline(&ptr, fp) > 1)
+      while (dv_getline(&ptr, fp, maxlinecount) > 1)
 	;       
     }
     
     for (j = 0 ; j < y ; j++) {
-      if ((rlen = dv_getline(&ptr, fp)) == -1) break;
+      if ((rlen = dv_getline(&ptr, fp, maxlinecount)) == -1) break;
       
       /**
        ** skip columns

@@ -1,0 +1,8 @@
+a = read_lines("../../data/data_getline_test", maxlinecount=10000000)
+
+if (hasvalue(a)) {
+	if(equals(a[1:4,,], "foo ")) {
+		exit(0)
+	}
+}
+exit(1)
