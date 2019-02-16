@@ -1916,7 +1916,7 @@ rfQube(const dataKey *objSize, Var *vQube, int load_suffix_data){
 	
 	fileName = (char *)alloca(strlen(objSize->FileName)+1);
 	pickFilename(fileName, objSize->FileName);
-	parse_error("Reading %s from %s...\n", objSize->Name, fileName);
+	parse_error("Reading %s qube from %s...\n", objSize->Name? objSize->Name: "unnamed", fileName);
 	if ((fp = fopen(fileName, "rb")) == NULL){
 		fprintf(stderr, "Unable to open file for reading: \"%s\". Reason: %s\n", fileName, strerror(errno));
 		return 0;
@@ -1994,7 +1994,7 @@ rfTable(dataKey *objSize, Var * ob, LABEL *label){
 
 	fileName = (char *)alloca(strlen(objSize->FileName)+1);
 	pickFilename(fileName, objSize->FileName);
-	parse_error("Reading %s from %s...\n", objSize->Name, fileName);
+	parse_error("Reading %s table from %s...\n", objSize->Name? objSize->Name: "unnamed", fileName);
 
 	f = (FIELD **) label->fields->ptr;
 	num_items = label->fields->number;  /*This is a count of BOTH columns AND bit-columns */
@@ -2380,7 +2380,7 @@ rfImage(dataKey *objSize, Var * ob){
 
 	fileName = (char *)alloca(strlen(objSize->FileName)+1);
 	pickFilename(fileName, objSize->FileName);
-	parse_error("Reading %s from %s...\n", objSize->Name, fileName);
+	parse_error("Reading %s image from %s...\n", objSize->Name? objSize->Name: "unnamed", fileName);
 	if ((fp = fopen(fileName, "rb")) == NULL){
 		fprintf(stderr, "Unable to open file for reading: \"%s\". Reason: %s\n", fileName, strerror(errno));
 		return 0;
@@ -2422,7 +2422,7 @@ rfHistogram(dataKey *objSize, Var * ob){
 
 	fileName = (char *)alloca(strlen(objSize->FileName)+1);
 	pickFilename(fileName, objSize->FileName);
-  parse_error("Reading %s from %s...\n", objSize->Name, fileName);
+  parse_error("Reading %s histogram from %s...\n", objSize->Name? objSize->Name: "unnamed", fileName);
 	if ((fp = fopen(fileName, "rb")) == NULL){
 		fprintf(stderr, "Unable to open file for reading: \"%s\". Reason: %s\n", fileName, strerror(errno));
 		return 0;
@@ -2549,7 +2549,7 @@ rfHistory(dataKey *objSize, Var *ob) {
 	
 	fileName = (char *)alloca(strlen(objSize->FileName)+1);
 	pickFilename(fileName, objSize->FileName);
-	parse_error("Reading %s from %s...\n", objSize->Name, fileName);
+	parse_error("Reading %s history from %s...\n", objSize->Name? objSize->Name: "unnamed", fileName);
 	if ((fp = fopen(fileName, "rb")) == NULL){
 		fprintf(stderr, "Unable to open file for reading: \"%s\". Reason: %s\n", fileName, strerror(errno));
 		return 0;
@@ -3655,7 +3655,7 @@ static Var * xmlParseLabelFiles(Var * v, LABEL *label, dataKey *data_key,
                 label->table = NULL;
 
                 // create a new dataKey and pass it in as well
-                data_key = malloc(sizeof(dataKey));
+                data_key = calloc(1,sizeof(dataKey));
                 if (data_key == NULL)
                 {
                     parse_error(
