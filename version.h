@@ -1,8 +1,19 @@
-char *version = "@(#) daVinci Version #2.21";
+char *version = "@(#) daVinci Version #2.22";
 
 #include "build.h"
 
 /*
+  Version 2.22: Wed Feb 13 12:09:34 MST 2019
+  * Fixed load HDF seg-faults after message "Group count < 0".
+    The fix handles the null return value by not de-referencing it
+	to set variable name. Also, the conditional on group count in
+	load_hdf5() was changed to allow zero-length / empty structures.
+  * Fixed load_pds4() dying when binary table did not have a name.
+    When name of the object is not specified, the object itself is
+	used as the name, e.g. Table_Binary if unnamed will be stored
+	as Table_Binary. Also updated binary loading functions to print
+	"unnamed" as the object name in the printed messages.
+
   Version 2.21: Fri Jun 1 14:55:11 MST 2018
   * x_plot() now produces smooth stair-stepped plots for values in the 10-5 range.
   

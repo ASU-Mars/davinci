@@ -313,7 +313,12 @@ group_iter(hid_t parent, const char *name, void *iter_data)
     case H5G_GROUP:
         child = H5Gopen(parent, name);
         v = load_hdf5(child, ((dv_h5_group_iter_data *)iter_data)->dim_handling);
-        V_NAME(v) = (name ? strdup(name) : 0);
+		if (v != NULL){
+			V_NAME(v) = (name ? strdup(name) : 0);
+		}
+		else {
+			parse_error("Unable to load sub-structure \"%s\", skipping!\n", name);
+		}
         H5Gclose(child);
         break;
 
@@ -568,7 +573,7 @@ load_hdf5(hid_t parent, dv_h5_dim_handling dim_handling)
 
     H5Giterate(parent, ".", NULL, count_group, &count);
 
-    if (count <= 0) {
+    if (count < 0) {
         parse_error("Group count < 0");
         return(NULL);
     }
