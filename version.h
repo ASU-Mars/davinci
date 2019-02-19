@@ -3,7 +3,10 @@ char *version = "@(#) daVinci Version #2.22";
 #include "build.h"
 
 /*
-  Version 2.22: Wed Feb 13 12:09:34 MST 2019
+  Version 2.22: Mon Feb 18 22:37:07 MST 2019
+  * Fixed a seg-fault when pack() generated a warning about
+    potential value truncation.
+  Wed Feb 13 12:09:34 MST 2019
   * Fixed load HDF seg-faults after message "Group count < 0".
     The fix handles the null return value by not de-referencing it
 	to set variable name. Also, the conditional on group count in
