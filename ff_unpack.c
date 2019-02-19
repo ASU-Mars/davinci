@@ -1362,7 +1362,7 @@ ff_pack(vfuncptr func, Var* arg)
 	int warning;
 	if (warning = pack(reg_data, template, filename, num_items, rows, skip)) {
 		parse_error("Packed %d records to to %s.", rows, filename);
-		if (warning == 2) parse_error("Column \"%s\" has been truncated.", V_STRING(column_names));
+		if (warning == 2) parse_error("Some values may have been truncated, e.g. due to double -> float/int conversion.");
 	}
 
 	cleanup_data(reg_data, num_items); // clean memory for reg_data
@@ -1550,7 +1550,7 @@ pack(data* thedata, char* template, char* filename, int numData, int rows, int o
 	unpack_digest* digest = NULL;
 	FILE* file = NULL;
 	byte* buffer = NULL;
-	int pr;
+	int pr = 0;
 
 	// check thedata argument, can't pack what doesn't exist
 	if(thedata == NULL) {
@@ -1776,7 +1776,7 @@ pack_row(data* the_data, unpack_digest* digest, int row, byte* buffer) {
 	char letter;
 	char *src_buf;
 	int src_type, src_columns;
-	int ctef;
+	int ctef = 0;
 
 	// start for loop through unpack_digest's input
 	for(j = 0; j < digest->num_items; j++) {
