@@ -1,8 +1,11 @@
-char *version = "@(#) daVinci Version #2.22";
+char *version = "@(#) daVinci Version #2.23";
 
 #include "build.h"
 
 /*
+  Version 2.23: Tue Aug 20 13:26:36 MST 2019
+  * Updated iomedley configure / make to support MacOS builds.
+  
   Version 2.22: Mon Feb 18 22:37:07 MST 2019
   * Fixed a seg-fault when pack() generated a warning about
     potential value truncation.
