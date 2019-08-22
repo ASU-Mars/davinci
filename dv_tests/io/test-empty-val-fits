@@ -1,0 +1,8 @@
+fits=read_fits("../data/20181116T083213S262_pol_iofL2pan.fits")
+if(HasValue(fits) == 1){
+	if(HasValue(fits.object_1.data) == 1){
+		exit(0);
+	}
+}
+exit(1);
+

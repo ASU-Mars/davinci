@@ -1,8 +1,11 @@
-char *version = "@(#) daVinci Version #2.23";
+char *version = "@(#) daVinci Version #2.24";
 
 #include "build.h"
 
 /*
+  Version 2.24: Thu Aug 22 14:30:04 MST 2019
+  * Fixed laod_fits() failing on a keyword with empty value.
+
   Version 2.23: Tue Aug 20 13:26:36 MST 2019
   * Updated iomedley configure / make to support MacOS builds.
   

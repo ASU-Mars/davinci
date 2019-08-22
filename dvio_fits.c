@@ -972,6 +972,8 @@ FITS_Read_Entry(char *fits_filename) {
 			if (strcmp("HISTORY", name) == 0 || strcmp("COMMENT", name) == 0) {
 				key_type = 'C';
 				strcpy(fits_value, fits_comment); // comments have no value
+			} else if (strlen(fits_value) == 0){
+				key_type = 'C';
 			} else {
 				fits_get_keytype(fits_value, &key_type, &status); // drd input is the fits_value, returns the type
 																  // 'C', 'L', 'I', 'F' or 'X',
