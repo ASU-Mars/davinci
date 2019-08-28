@@ -6,10 +6,17 @@ extern "C" {
 
 #ifdef HAVE_LIBXML2
 
+#define ARRAY_2D_IMAGE "Array_2D_Image"
 #define ASCII_STRING "ASCII_String"
+#define AXES "axes"
+#define AXIS_ARRAY "Axis_Array"
+#define AXIS_INDEX_ORDER "axis_index_order"
+#define AXIS_NAME "axis_name"
 #define COMMENT "comment"
 #define DATA_TYPE "data_type"
 #define DESCRIPTION "description"
+#define ELEMENTS "elements"
+#define ELEMENT_ARRAY "Element_Array"
 #define ELEMENT_TYPE "element_type"
 #define EXTERNAL_FILE "File"
 #define FIELDS "fields"
@@ -27,6 +34,7 @@ extern "C" {
 #define IEEE_MSB_DOUBLE "IEEE754MSBDouble"
 #define IEEE_LSB_SINGLE "IEEE754LSBSingle"
 #define IEEE_MSB_SINGLE "IEEE754MSBSingle"
+#define LAST_INDEX_FASTEST "Last_Index_Fastest"
 #define MD5_CHECKSUM "md5_checksum"
 #define NAME_ATTRIBUTE "name"
 #define OFFSET "offset"
@@ -35,6 +43,7 @@ extern "C" {
 #define REPETITIONS "repetitions"
 #define RECORD_LENGTH "record_length"
 #define SCALING_FACTOR "scaling_factor"
+#define SEQUENCE_NUMBER "sequence_number"
 #define SIGNED_LSB2 "SignedLSB2"
 #define SIGNED_LSB4 "SignedLSB4"
 #define SIGNED_MSB2 "SignedMSB2"

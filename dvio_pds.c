@@ -40,6 +40,7 @@
 		return 0; \
 	}
 
+#define SWAP_INT(x,y) { int tmp = (x); (x) = (y); (y) = tmp; }
 
 static char keyword_prefix[] = "PTR_TO_";
 static int keyword_prefix_length = 8;
@@ -427,8 +428,8 @@ traverseGroup(KEYWORD *kw, Var *v){
 static char *
 getGeneralObjClass(const char *objClassName){
 	char *p = strrchr(objClassName, '_');
-	p = (p != NULL)? p+1: objClassName;
-	return lowercase(strdup(p));
+	p = strdup((p != NULL)? p+1: objClassName);
+	return lowercase(p);
 }
 
 static size_t
@@ -2826,6 +2827,54 @@ static void print_pds4_structs(LABEL *label, dataKey *data_key)
     }
 }
 
+static iom_edf 
+pds4TypeToIomEformat(const char *data_type) {
+    iom_edf eformat = iom_EDF_INVALID;
+    int bytes = -1;
+
+    if (!strcmp(data_type, UNSIGNED_BYTE)){
+        eformat = iom_MSB_INT_1;
+    }
+    else if (!strcmp(data_type, UNSIGNED_MSB2)){
+        eformat = iom_MSB_INT_2;
+    }
+    else if (!strcmp(data_type, UNSIGNED_MSB4)) {
+        eformat = iom_MSB_INT_4;
+    }
+    else if (!strcmp(data_type, UNSIGNED_LSB2)) {
+        eformat = iom_LSB_INT_2;
+    }
+    else if (!strcmp(data_type, UNSIGNED_LSB4)) {
+        eformat = iom_LSB_INT_4;
+    }
+    else if (!strcmp(data_type, SIGNED_LSB2)) {
+        eformat = iom_LSB_INT_2;
+    }
+    else if (!strcmp(data_type, SIGNED_LSB4)) {
+        eformat = iom_LSB_INT_4;
+    }
+    else if (!strcmp(data_type, SIGNED_MSB2)) {
+        eformat = iom_MSB_INT_2;
+    }
+    else if (!strcmp(data_type, SIGNED_MSB4)) {
+        eformat = iom_MSB_INT_4;
+    }
+    else if (!strcmp(data_type, IEEE_LSB_DOUBLE)) {
+        eformat = iom_LSB_IEEE_REAL_8;
+    }
+    else if (!strcmp(data_type, IEEE_LSB_SINGLE)) {
+        eformat = iom_LSB_IEEE_REAL_4;
+    }
+    else if (!strcmp(data_type, IEEE_MSB_DOUBLE)) {
+        eformat = iom_MSB_IEEE_REAL_8;
+    }
+    else if (!strcmp(data_type, IEEE_MSB_SINGLE)) {
+        eformat = iom_MSB_IEEE_REAL_4;
+    }
+    
+    return eformat;
+}
+
 static int loadFieldBinary(Var *v, LABEL *label, dataKey *data_key,
         int use_names, int grp_count, int grp_start, char *parent_name)
 {
@@ -3519,6 +3568,180 @@ static int loadBinaryTable(Var *v, LABEL *label, dataKey *data_key,
     return ret_val;
 }
 
+static int load2dImage(Var *v, LABEL *label, dataKey *data_key,
+        int use_names, int get_data)
+{
+    int i, j;
+    int count = 0;
+    int elem_cnt = 0;
+    int ret_val = 0;
+    char *name = NULL;
+    Var *s = NULL;
+    Var *t = NULL;
+    int ndims = 0;
+    int dims[3];
+    size_t size = 0;
+    int org = BSQ;
+    int axisSerial = 0;
+    int dim[3] = {0,0,0};
+    int axes[3] = {0,1,2};
+    Var *ss = NULL;
+    iom_edf eformat = iom_EDF_INVALID;
+    int eformat_len = -1;
+
+    count = get_struct_count(v);
+
+    for (i = 0; i < count; i++)
+    {
+        get_struct_element(v, i, &name, &s);
+        if (name == NULL || s == NULL)
+        {
+            // TODO include the name of the object being loaded here
+            // error msg
+            parse_error(
+                    "Encountered a NULL davinci child node in load2dImage()\n");
+            return 0;
+        }
+        if (!strcmp(name, OFFSET))
+        {
+            elem_cnt = get_struct_count(s);
+            for (j = 0; j < elem_cnt; j++)
+            {
+                get_struct_element(s, j, &name, &t);
+                if (name == NULL || t == NULL)
+                {
+                    // error msg
+                    parse_error("Encountered a NULL davinci child node while fetching offset, assuming zero\n");
+                    return 0;
+                }
+
+                if (!strcmp(name, VALUE))
+                {
+                    errno = 0;
+                    data_key->dptr = V_INT(t);
+                    if (errno == ERANGE)
+                    {
+                        // error msg couldn't read the file name
+                        parse_error("Error encountered while accessing offset value\n");
+                        return 0;
+                    }
+                }
+            }
+
+        }
+        else if (!strcmp(name, ARRAY_2D_IMAGE)){
+        }
+        else if (!strcmp(name, AXES))
+        {
+            ndims = V_INT(s);
+        }
+        else if (!strcmp(name, AXIS_INDEX_ORDER))
+        {
+            char *orgStr = NULL;
+            if ((orgStr = V_STRING(s)) != NULL){
+                if (!strcmp(orgStr, LAST_INDEX_FASTEST)){
+                    // TODO use below in determing org
+                }
+            }
+        }
+        else if (!strcmp(name, OFFSET)){
+            data_key->dptr = V_INT(s); // TODO handle other offset units, assuming bytes for now
+        }
+        else if (!strcmp(name, DESCRIPTION))
+        {
+            if ((label->name = strdup(V_STRING(s))) == NULL)
+            {
+                parse_error("Error encountered while accessing object description\n");
+                return 0;
+            }
+        }
+        else if (!strcmp(name, ELEMENT_ARRAY)){
+            if (find_struct(s, DATA_TYPE, &ss) >= 0){
+                char *typeStr = V_STRING(ss);
+                eformat = pds4TypeToIomEformat(typeStr);
+            }
+        }
+        else if (!strncmp(name, AXIS_ARRAY, strlen(AXIS_ARRAY))){ // there could be more than one, with suffix _1, _2, ...
+            char *axisName = NULL;
+            int dimSize = 0;
+            int axisSeq = axisSerial++;
+            if (find_struct(s, AXIS_NAME, &ss) >= 0){
+                axisName = V_STRING(ss);
+            }
+            if (find_struct(s, ELEMENTS, &ss) >= 0){
+                dimSize = V_INT(ss);
+            }
+            if (find_struct(s, SEQUENCE_NUMBER, &ss) >= 0){
+                axisSeq = V_INT(ss)-1;
+            }
+
+            dim[axisSeq] = dimSize;
+            axes[axisSeq] = (!strcmp(axisName,"Sample"))? 0: (!strcmp(axisName,"Line"))? 1: 2;
+        }
+        // TODO start here
+    }
+
+    // PDS4 default axis_index_order = "Last Index Fastest"; davinci has first index fastest, so we flip axes & dims
+    for(i=0; i<ndims/2; i++){
+        SWAP_INT(axes[i], axes[ndims-1-i]);
+        SWAP_INT(dim[i], dim[ndims-1-i]);
+    }
+
+    // axes order (0=x,1=y,2=z): bsq=0,1,2; bip=2,0,1; bil=0,2,1
+    org = (axes[0] == 0)? ((axes[1] == 1)? BSQ: BIL): BIP;
+
+    // calculate size
+    size = ndims > 0? 1: 0;
+    for(i=0; i<ndims; i++){
+        size *= dim[i];
+    }
+    data_key->size = size * eformat_to_iformat(eformat);
+
+//    print_pds4_structs(label, data_key);
+
+    // read image data
+    if (get_data)
+    {
+        int fd;
+        struct iom_iheader h;
+        char *datafile = data_key->FileName;
+        char *data = NULL;
+
+#if defined(__CYGWIN__) || defined(__MINGW32__)
+        if ((fd = open(datafile, O_RDONLY|O_BINARY)) < 0) {
+            fprintf(stderr, "Unable to open data file: %s\n", datafile);
+            ret_val = -1;
+        }
+#else
+        if ((fd = open(datafile, O_RDONLY)) < 0) {
+            fprintf(stderr, "Unable to open data file: %s\n", datafile);
+            ret_val = -1;
+        }
+#endif /* __CYGWIN__ */
+
+        iom_init_iheader(&h);
+        h.dptr = data_key->dptr;
+        memcpy(h.size, dim, sizeof(h.size));
+        h.eformat = eformat;
+        h.org = org;
+
+        data = iom_read_qube_data(fd, &h);
+        close(fd);
+
+        if (data != NULL){
+            Var *datav = iom_iheader2var(&h);
+            V_DATA(datav) = data;
+            add_struct(v, strdup("data"), datav);
+            ret_val = 1;
+        }
+        else {
+            parse_error("Unable to read all or part of the image from: %s\n", datafile);
+            ret_val = -1;
+        }
+    }
+    return ret_val;
+}
+
 static int loadFileInfo(Var *v, LABEL *label, dataKey *data_key)
 {
     int i, j;
@@ -3631,8 +3854,7 @@ static Var * xmlParseLabelFiles(Var * v, LABEL *label, dataKey *data_key,
                 break;
             }
             // if this node is a file
-            if (strstr(node_name, EXTERNAL_FILE) != NULL && strstr(node_name,
-                    FILE_AREA_OBSERVATIONAL) == NULL)
+            if (strcmp(node_name, EXTERNAL_FILE) == 0)
             {
                 if (data_key == NULL)
                 {
@@ -3686,6 +3908,25 @@ static Var * xmlParseLabelFiles(Var * v, LABEL *label, dataKey *data_key,
                     err = 1;
                     break;
                 }
+            }
+            else if (strstr(node_name, ARRAY_2D_IMAGE) != NULL && label != NULL
+                    && data_key != NULL)
+            {
+                if (find_struct(s, NAME_ATTRIBUTE, &t) >= 0)
+                {
+                    char *image_name = strdup(V_STRING(t));
+                    if (image_name != NULL)
+                    {
+                        data_key->Name = image_name;
+                    }
+                }
+
+                if (!load2dImage(s, label, data_key, use_names, get_data))
+                {
+                    err = 1;
+                    break;
+                }
+
             }
             else if (strstr(node_name, TABLE_BINARY) != NULL && label != NULL
                     && data_key != NULL)

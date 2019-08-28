@@ -363,6 +363,7 @@ static int load_node(xmlNodePtr nptr, Var *v, int use_names)
                 if (elem == NULL)
                 {
                     elem = new_struct(0);
+                    node_name = gen_next_unused_name_instance(node_name, v);
                     add_struct(v, node_name, elem);
                 }
 
