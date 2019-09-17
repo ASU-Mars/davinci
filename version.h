@@ -1,8 +1,12 @@
-char *version = "@(#) daVinci Version #2.24";
+char *version = "@(#) daVinci Version #2.25";
 
 #include "build.h"
 
 /*
+  Version 2.25:
+  * Fixed load_pds(), removed debug code left in that placed
+    the data in the wrong structure member variable.
+
   Version 2.24: Tue Aug 27 17:08:07 MST 2019
   * Fixed laod_fits() failing on a keyword with empty value.
   * Added initial version of 2D image reading from PDS4.

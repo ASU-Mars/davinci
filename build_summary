@@ -8,7 +8,7 @@ printf("            HDF5:  Yes\\n");
 printf("GUI/Vicar Module:  Yes\\n");
 printf("         libisis:  No\\n");
 printf("            FITS:  Yes\\n");
-printf("             QMV:  No\\n");
+printf("             QMV:  Yes\\n");
 printf("             Qt4:  No\\n");
 printf("         libxml2:  Yes\\n");
 printf(" libxml2 headers:  Yes\\n");
