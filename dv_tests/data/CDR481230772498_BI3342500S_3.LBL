@@ -1,0 +1,111 @@
+PDS_VERSION_ID                 = PDS3
+LABEL_REVISION_NOTE            = "2006-04-11 D. Humm (APL), modified
+                                  2007-02-19, P. Cavender (JHU/APL);
+                                     Version 2, new stray light subtraction"
+
+/* Level 4 CDR (Calibration Data Record) Identification */
+
+DATA_SET_ID                    = "MRO-M-CRISM-4/6-CDR-V1.0"
+PRODUCT_ID                     = "CDR481230772498_BI3342500S_3"
+
+                           /* ( CDR4Ptttttttttt_pprbeeewsn_v         ) */ 
+                           /* ( P = partition [last dgt] of sclk time) */ 
+                           /* ( tttttttttt = s/c start or mean time  ) */ 
+                           /* ( pp = calib. type from SIS table 2-8  ) */ 
+                           /* ( r = frame rate identifier, 0-4       ) */ 
+                           /* ( b = binning identifier, 0-3          ) */ 
+                           /* ( eee = exposure time parameter, 0-480 ) */ 
+                           /* ( w = wavelength filter, 0-3           ) */ 
+                           /* ( s = side: 1 or 2, or 0 if N/A        ) */ 
+                           /* ( n = sensor ID: S, L, or J            ) */ 
+                           /* ( v = version                          ) */ 
+
+PRODUCT_TYPE                   = CDR
+SPACECRAFT_ID                  = MRO
+INSTRUMENT_ID                  = CRISM
+START_TIME                     = 2019-01-01T01:14:07.350
+STOP_TIME                      = 2019-01-01T01:14:08.084
+SPACECRAFT_CLOCK_START_COUNT   = "18/1230772498.18759"
+SPACECRAFT_CLOCK_STOP_COUNT    = "18/1230772499.01351"
+OBSERVATION_TIME               = 2019-01-01T01:14:07.717
+PRODUCT_CREATION_TIME          = 2019-01-09T09:05:56
+
+OBSERVATION_TYPE               = "HSV"
+OBSERVATION_ID                 = "16#0004C332#"
+MRO:OBSERVATION_NUMBER         = 16#00#
+MRO:ACTIVITY_ID                = "DF105"
+SOURCE_PRODUCT_ID = {
+    "CDR450924300802_DM0300000S_3",
+    "CDR6_1_0000000000_LI_J_0",
+    "CDR6_2_0835294537_PP_S_0",
+    "CDR6_8_1230768050_ST_J_0",
+    "HSV0004C332_00_DF105S_EDR0"
+}
+PRODUCER_INSTITUTION_NAME      = "JOHNS HOPKINS UNIVERSITY
+                                  APPLIED PHYSICS LABORATORY"
+SOFTWARE_NAME                  = "crism_imagecal"
+SOFTWARE_VERSION_ID            = "2.5.4"
+MRO:SENSOR_ID                  = "S"
+PRODUCT_VERSION_ID             = "3"
+
+/* CDR Instrument and Observation Parameters */
+
+SAMPLING_MODE_ID               = "HYPERSPEC"
+MRO:WAVELENGTH_FILE_NAME       = "CDR450924300802_WA0300000S_2.IMG"
+MRO:DETECTOR_TEMPERATURE       = -54.578
+MRO:OPTICAL_BENCH_TEMPERATURE  = -42.339
+MRO:SPECTROMETER_HOUSING_TEMP  = -65.398
+MRO:SPHERE_TEMPERATURE         = -42.268
+MRO:FPE_TEMPERATURE            =  7.634
+SHUTTER_MODE_ID                = "CLOSED"
+LIGHT_SOURCE_NAME              = "NONE"
+MRO:CALIBRATION_LAMP_STATUS    = "OFF"
+MRO:CALIBRATION_LAMP_LEVEL     = "N/A"
+MRO:FRAME_RATE                 = 15.00 <HZ>
+PIXEL_AVERAGING_WIDTH          = 10
+MRO:EXPOSURE_PARAMETER         = 425
+MRO:WAVELENGTH_FILTER          = "0"
+
+OBJECT          = FILE
+  ^IMAGE        =  "CDR481230772498_BI3342500S_3.IMG"
+  ^ROWNUM_TABLE = ("CDR481230772498_BI3342500S_3.IMG",108)
+  RECORD_TYPE   = FIXED_LENGTH
+  RECORD_BYTES  = 256
+  FILE_RECORDS  = 108
+
+  OBJECT               = IMAGE
+    LINES              = 1
+    LINE_SAMPLES       = 64
+    SAMPLE_TYPE        = PC_REAL
+    SAMPLE_BITS        = 32
+    BANDS              = 107
+    BAND_STORAGE_TYPE  = LINE_INTERLEAVED
+    DESCRIPTION        = "Detector Bias Image"
+  END_OBJECT = IMAGE
+
+  OBJECT               = ROWNUM_TABLE
+    NAME               = "SELECTED ROWS FROM DETECTOR"
+    INTERCHANGE_FORMAT = "BINARY"
+    ROWS               = 107
+    COLUMNS            = 1
+    ROW_BYTES          = 2
+    DESCRIPTION        = "The detector is subsampled in the spectral
+                         direction by selecting specific rows to be
+                         downlinked. This table provides a list of the rows
+                         selected for this image."
+
+    OBJECT = COLUMN
+      NAME             = DETECTOR_ROW_NUMBER
+      DATA_TYPE        = MSB_UNSIGNED_INTEGER
+      BIT_MASK         = 2#0000000111111111#
+      COLUMN_NUMBER    = 1
+      START_BYTE       = 1
+      BYTES            = 2
+      DESCRIPTION      = "Detector row number from which the data was taken."
+    END_OBJECT = COLUMN
+
+  END_OBJECT = ROWNUM_TABLE
+
+END_OBJECT = FILE
+
+END

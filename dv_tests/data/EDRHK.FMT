@@ -1,0 +1,2403 @@
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 1 
+  NAME          = DATA_QUALITY_CODE 
+  DATA_TYPE     = CHARACTER 
+  START_BYTE    = 1 
+  BYTES         = 16 
+  DESCRIPTION = "String representing quality codes for this
+                 frame;
+                 Byte 0: populated in EDR; 1 = focal planes not
+                 properly powered; 0 = focal planes properly
+                 powered;
+                 Byte 1: populated in EDR; updated in RDR; 1 =
+                 saturated data (8-bit 255; 12-bit 4095; or
+                 within 10% of 14-bit saturation - bias-removed
+                 DN of >9000) present outside of bad pixel mask;
+                 0 = saturated data not present;
+                 Byte 2: populated in EDR; 1 = missing data (some
+                 pixels populated with 65535); 0 = no missing
+                 data;
+                 Byte 3: populated in EDR: 1 = shutter out of
+                 commanded position; 0 = shutter in position;
+                 Byte 4: populated in EDR; 1 = focal plane lamp
+                 setting out of commanded range; 0 = focal plane
+                 lamp setting in commanded range;
+                 Byte 5: populated in EDR; 1 = sphere goal out of
+                 commanded range; 0 = sphere goal in commanded
+                 range;
+                 Byte 6: populated in RDR; 1 = VNIR detector out
+                 of calibrated temperature range; 0 = VNIR
+                 detector within calibrated temperature range
+                 Byte 7: populated in RDR; 1 = IR detector out of
+                 calibrated temperature range; 0 = IR detector
+                 within calibrated temperature range
+                 Byte 8: populated in RDR; 1 = sphere temperature
+                 out of calibrated range; 0 = temperature sphere
+                 within calibrated range
+                 Byte 9: populated in RDR; 1= spectrometer
+                 housing temperature >-75C; 0 = spectrometer
+                 housing temperature <-75C;
+                 Byte 10: populated in RDR; 1 = target not
+                 covered; 0 = target covered (for targeted
+                 observation or EPF or multispectral window);
+                 Byte 11: populated in RDR; 1 = non-adjacent
+                 calibration files used; 0 = temporally adjacent
+                 calibration files used;
+                 Byte 12: populated in RDR; 1= violet I/F (from
+                 summary product backplane) suggests clouds or
+                 ice (>0.1); 0 = low violet I/F;
+                 Byte 13 through Byte 15 spare" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 2 
+  NAME          = SOLAR_LONGITUDE 
+  DATA_TYPE     = ASCII_REAL 
+  UNIT          = DEGREE 
+  START_BYTE    = 18 
+  BYTES         = 7 
+  DESCRIPTION = "Angular distance of Mars from its vernal
+                 equinox, i.e. season (Ls)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 3 
+  NAME          = SOLAR_DISTANCE 
+  DATA_TYPE     = ASCII_REAL 
+  UNIT          = KM 
+  START_BYTE    = 26 
+  BYTES         = 12 
+  DESCRIPTION = "Distance from center of Mars to center of the
+                 sun" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 4 
+  NAME          = LOCAL_TIME 
+  DATA_TYPE     = CHARACTER 
+  START_BYTE    = 39 
+  BYTES         = 9 
+  DESCRIPTION = "Time of day at center of FOV, expressed as
+                 HHMM.SS with 1 Mars solar day = 2400.00" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 5 
+  NAME          = CENTER_LATITUDE 
+  DATA_TYPE     = ASCII_REAL 
+  UNIT          = DEGREE 
+  START_BYTE    = 49 
+  BYTES         = 7 
+  DESCRIPTION = "Estimated planetocentric latitude at center of
+                 FOV" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 6 
+  NAME          = CENTER_LONGITUDE 
+  DATA_TYPE     = ASCII_REAL 
+  UNIT          = DEGREE 
+  START_BYTE    = 57 
+  BYTES         = 7 
+  DESCRIPTION = "Estimated longitude at center of FOV, east-
+                 positive, 0-360" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 7 
+  NAME          = CENTER_INCIDENCE_ANGLE 
+  DATA_TYPE     = ASCII_REAL 
+  UNIT          = DEGREE 
+  START_BYTE    = 65 
+  BYTES         = 7 
+  DESCRIPTION   = "Estimated incidence angle at center of FOV" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 8 
+  NAME          = CENTER_EMISSION_ANGLE 
+  DATA_TYPE     = ASCII_REAL 
+  UNIT          = DEGREE 
+  START_BYTE    = 73 
+  BYTES         = 7 
+  DESCRIPTION   = "Estimated emission angle at center of FOV" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 9 
+  NAME          = CENTER_PHASE_ANGLE 
+  DATA_TYPE     = ASCII_REAL 
+  UNIT          = DEGREE 
+  START_BYTE    = 81 
+  BYTES         = 7 
+  DESCRIPTION   = "Estimated phase angle at center of FOV" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 10 
+  NAME          = PREDICTED_DUST_OPACITY 
+  DATA_TYPE     = ASCII_REAL 
+  UNIT          = DIMENSIONLESS 
+  START_BYTE    = 89 
+  BYTES         = 6 
+  DESCRIPTION = "Value k describing fraction of solar irradiance
+                 blocked by atmospheric dust from the expression
+                 1-exp(-k)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 11 
+  NAME          = SYNCHRONIZATION_PATTERN 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 96 
+  BYTES         = 10 
+  DESCRIPTION = "Synchronization pattern used as index mark in
+                 frames of data; valid value is 4277809352" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 12 
+  NAME          = DATATYPE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 107 
+  BYTES         = 5 
+  DESCRIPTION   = "0 for image data; 1 for encoder diagnostics" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 13 
+  NAME          = NUMLINES 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 113 
+  BYTES         = 3 
+  DESCRIPTION   = "Amount of image data sent (lines)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 14 
+  NAME          = EXPOSURE_SCLK_S 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 117 
+  BYTES         = 10 
+  DESCRIPTION = "Spacecraft time in whole seconds at start of
+                 exposure" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 15 
+  NAME          = EXPOSURE_SCLK_SS 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 128 
+  BYTES         = 5 
+  DESCRIPTION = "Time of start of exposure in fractional second
+                 (1/2^16 seconds)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 16 
+  NAME          = SCAN_MOTOR_STATUS1 
+  DATA_TYPE     = CHARACTER 
+  START_BYTE    = 134 
+  BYTES         = 16 
+  DESCRIPTION = "Scan motor status at beginning of available
+                 exposure time; Byte 1: Platform direction; 0 =
+                 Down; 1 = Up; Byte 2: Latched (i.e. sticky)
+                 index pulse; 0 = No index; 1 = Index seen; Byte
+                 3: Latched (i.e. sticky) limit switch #2; 0 = No
+                 limit; 1 = Limit seen; Byte 4: Latched (i.e.
+                 sticky) limit switch #1; 0 = No limit; 1 = Limit
+                 seen; Byte 5: Raw inphase signal; 0 - 1; Byte 6:
+                 Raw quadrature signal; 0 - 1; Byte 7: Raw index
+                 signal; 0 = No index; 1 = Index; Byte 8: Hall
+                 Sensor; 0 - 7; Bytes 9-16 Encoded scan platform
+                 position; signed integer" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 17 
+  NAME          = SCAN_MOTOR_STATUS2 
+  DATA_TYPE     = CHARACTER 
+  START_BYTE    = 151 
+  BYTES         = 16 
+  DESCRIPTION = "Scan motor status at middle of available
+                 exposure time; Byte 1: Platform direction; 0 =
+                 Down; 1 = Up; Byte 2: Latched (i.e. sticky)
+                 index pulse; 0 = No index; 1 = Index seen; Byte
+                 3: Latched (i.e. sticky) limit switch #2; 0 = No
+                 limit; 1 = Limit seen; Byte 4: Latched (i.e.
+                 sticky) limit switch #1; 0 = No limit; 1 = Limit
+                 seen; Byte 5: Raw inphase signal; 0 - 1; Byte 6:
+                 Raw quadrature signal; 0 - 1; Byte 7: Raw index
+                 signal; 0 = No index; 1 = Index; Byte 8: Hall
+                 Sensor; 0 - 7; Bytes 9-16 Encoded scan platform
+                 position; signed integer" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 18 
+  NAME          = SCAN_MOTOR_STATUS3 
+  DATA_TYPE     = CHARACTER 
+  START_BYTE    = 168 
+  BYTES         = 16 
+  DESCRIPTION = "Scan motor status at end of available exposure
+                 time; Byte 1: Platform direction; 0 = Down; 1 =
+                 Up; Byte 2: Latched (i.e. sticky) index pulse; 0
+                 = No index; 1 = Index seen; Byte 3: Latched
+                 (i.e. sticky) limit switch #2; 0 = No limit; 1 =
+                 Limit seen; Byte 4: Latched (i.e. sticky) limit
+                 switch #1; 0 = No limit; 1 = Limit seen; Byte 5:
+                 Raw inphase signal; 0 - 1; Byte 6: Raw
+                 quadrature signal; 0 - 1; Byte 7: Raw index
+                 signal; 0 = No index; 1 = Index; Byte 8: Hall
+                 Sensor; 0 - 7; Bytes 9-16 Encoded scan platform
+                 position; signed integer" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 19 
+  NAME          = SCAN_MOTOR_ENCPOS1 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 185 
+  BYTES         = 8 
+  DESCRIPTION = "Gimbal position at start of available exposure
+                 time at the frame rate being used" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 20 
+  NAME          = SCAN_MOTOR_ENCPOS2 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 194 
+  BYTES         = 8 
+  DESCRIPTION = "Gimbal position at middle of available exposure
+                 time at the frame rate being used" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 21 
+  NAME          = SCAN_MOTOR_ENCPOS3 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 203 
+  BYTES         = 8 
+  DESCRIPTION = "Gimbal position at end of available exposure
+                 time at the frame rate being used" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 22 
+  NAME          = SPECT_ID 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 212 
+  BYTES         = 1 
+  DESCRIPTION   = "Spectrometer identifier; 0 = IR; 1 = VNIR" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 23 
+  NAME          = TEMP_MON 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 214 
+  BYTES         = 1 
+  DESCRIPTION = "Temperature monitoring enabled or disabled; 0 =
+                 off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 24 
+  NAME          = EXPOSURE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 216 
+  BYTES         = 3 
+  DESCRIPTION = "Exposure time parameter; number of 1/480ths of
+                 inverse frame rate; specified separately for
+                 each detector" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 25 
+  NAME          = RATE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 220 
+  BYTES         = 1 
+  DESCRIPTION = "Rate of frame acquisition; 0 = 1 Hz; 1 = 3.75
+                 Hz; 2 = 5 Hz; 3 = 15 Hz; 4 = 30 Hz; specified
+                 separately for each detector" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 26 
+  NAME          = SOURCE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 222 
+  BYTES         = 1 
+  DESCRIPTION = "Data source; either actual detector or a test
+                 pattern; 0 = Detector; 1 - 7 = Test pattern;
+                 specified separately for each detector" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 27 
+  NAME          = FILTER 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 224 
+  BYTES         = 1 
+  DESCRIPTION = "Wavelength filter table; which of uploadable
+                 tables 0-3; specified separately for each
+                 detector" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 28 
+  NAME          = BINNING 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 226 
+  BYTES         = 1 
+  DESCRIPTION = "Spatial pixel binning mode; specified separately
+                 for each detector; 0 = 1:1; 1 = 2:1; 2 = 5:1;
+                 3 = 10:1" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 29 
+  NAME          = LOSSY 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 228 
+  BYTES         = 1 
+  DESCRIPTION = "Lossy compression enabled or disabled; 12 to 8
+                 bit look-up table commanded line by line in
+                 uploaded data structure; specified separately
+                 for each detector; 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 30 
+  NAME          = FAST 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 230 
+  BYTES         = 1 
+  DESCRIPTION = "Lossless Fast compression enabled or disabled;
+                 specified separately for each detector; 0 =
+                 disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 31 
+  NAME          = DPU_BOARD_TEMP 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 232 
+  BYTES         = 5 
+  DESCRIPTION   = "DPU_PWR_0; DPU power board temperature" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 32 
+  NAME          = DPU_P5_VOLTAGE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 238 
+  BYTES         = 5 
+  DESCRIPTION   = "DPU_PWR_1; DPU +5 voltage" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 33 
+  NAME          = DPU_P5_CURRENT 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 244 
+  BYTES         = 5 
+  DESCRIPTION   = "DPU_PWR_3; DPU +5 current" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 34 
+  NAME          = SCAN_MOT_CURR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 250 
+  BYTES         = 5 
+  DESCRIPTION   = "DPU_PWR_4; Scan motor current" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 35 
+  NAME          = IR_BOARD_TEMP 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 256 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_PWR_0; IR power board temperature" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 36 
+  NAME          = IR_FPU_P12_VOLTAGE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 262 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_PWR_1; IR FPU +12 voltage" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 37 
+  NAME          = IR_FPU_P7_VOLTAGE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 268 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_PWR_2; IR FPU +7 voltage" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 38 
+  NAME          = IR_FPU_CURRENT 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 274 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_PWR_3; IR FPU current" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 39 
+  NAME          = HEATER_34_CURRENT 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 280 
+  BYTES         = 5 
+  DESCRIPTION = "IR_PWR_4; heater 3 & 4 current; on cooler
+                 radiator and spectrometer housing" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 40 
+  NAME          = VNIR_BOARD_TEMP 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 286 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_PWR_0; VNIR power board temperature" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 41 
+  NAME          = VNIR_FPU_P12_VOLTAGE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 292 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_PWR_1; VNIR FPU +12 voltage" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 42 
+  NAME          = VNIR_FPU_P7_VOLTAGE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 298 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_PWR_2; VNIR FPU +7 voltage" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 43 
+  NAME          = VNIR_FPU_CURRENT 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 304 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_PWR_3; VNIR FPU current" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 44 
+  NAME          = HEATER_12_CURRENT 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 310 
+  BYTES         = 5 
+  DESCRIPTION = "VNIR_PWR_4; Heater 1 & 2 (on gimbal electronics
+                 housing) current" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 45 
+  NAME          = COOL_BOARD_TEMP 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 316 
+  BYTES         = 5 
+  DESCRIPTION   = "COOL_PWR_0; Cooler power board temperature" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 46 
+  NAME          = COOL_P15_VOLTAGE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 322 
+  BYTES         = 5 
+  DESCRIPTION   = "COOL_PWR_1; Cooler +15 voltage" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 47 
+  NAME          = COOL_CURRENT 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 328 
+  BYTES         = 5 
+  DESCRIPTION   = "COOL_PWR_3; cooler current" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 48 
+  NAME          = HOP_HEATER_12_CURR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 334 
+  BYTES         = 5 
+  DESCRIPTION   = "COOL_PWR_4; HOP heater 1 & 2 current" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 49 
+  NAME          = SHUT_MOTOR_CURR_IR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 340 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_0; Shutter motor current (IR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 50 
+  NAME          = IR_DETECTOR_TEMP1 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 346 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_1; IR detector temperature 1" 
+
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 51 
+  NAME          = IR_DETECTOR_TEMP2 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 352 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_2; IR detector temperature 2" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 52 
+  NAME          = COOLER_TEMP1 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 358 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_3; cooler temperature 1" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 53 
+  NAME          = COOLER_TEMP2 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 364 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_4; cooler temperature 2" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 54 
+  NAME          = COOLER_TEMP3 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 370 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_5; cooler temperature 3" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 55 
+  NAME          = SHUT_MOTOR_TEMP_IR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 376 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_6; shutter motor temperature (IR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 56 
+  NAME          = SPHERE_TEMP_IR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 382 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_7; integrating sphere temperature (IR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 57 
+  NAME          = SPIDER_TEMP_IR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 388 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_8; telescope spider temperature (IR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 58 
+  NAME          = SPECT_CAVITY_TEMP_IR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 394 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_9; spectral cavity temperature (IR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 59 
+  NAME          = OSU_CAVITY_TEMP_IR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 400 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_10; OSU cavity temperature (IR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 60 
+  NAME          = IR_FPU_BOARD_TEMP 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 406 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_11; IR FPU board temperature" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 61 
+  NAME          = IR_SPHERE_CURR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 412 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_12; IR sphere lamp current" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 62 
+  NAME          = HOP_TEMP_IR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 418 
+  BYTES         = 5 
+  DESCRIPTION   = "IR_FP_13; HOP temperature (IR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 63 
+  NAME          = SHUT_MOTOR_CURR_VNIR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 424 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_FP_0; shutter motor current (VNIR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 64 
+  NAME          = VNIR_DETECTOR_TEMP1 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 430 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_FP_1; VNIR detector temperature 1" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 65 
+  NAME          = VNIR_DETECTOR_TEMP2 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 436 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_FP_2; VNIR detector temperature 2" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 66 
+  NAME          = TELESCOPE_TEMP 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 442 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_FP_3; telescope temperature (VNIR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 67 
+  NAME          = OPTICAL_BENCH_TEMP 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 448 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_FP_4; optical bench temperature (VNIR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 68 
+  NAME          = SPIDER_TEMP_VNIR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 454 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_FP_5; telescope spider temp. (VNIR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 69 
+  NAME          = SPECT_CAVITY_TEMP_VNIR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 460 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_FP_6; spectral cavity temperature (VNIR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 70 
+  NAME          = OSU_CAVITY_TEMP_VNIR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 466 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_FP_7; OSU cavity temperature (VNIR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 71 
+  NAME          = VNIR_FPU_BOARD_TEMP 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 472 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_FP_8; VNIR FPU board temperature" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 72 
+  NAME          = BAFFLETEMP 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 478 
+  BYTES         = 5 
+  DESCRIPTION   = "VNIR_FP_9; baffle temperature (VNIR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 73 
+  NAME          = SCAN_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 484 
+  BYTES         = 1 
+  DESCRIPTION   = "Scan motor power; 0 = off; 3 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 74 
+  NAME          = IR_PRI_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 486 
+  BYTES         = 1 
+  DESCRIPTION   = "IR FPU primary power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 75 
+  NAME          = HTR3_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 488 
+  BYTES         = 1 
+  DESCRIPTION = "Heater 3 (on cooler radiator) power; 0 = off;
+                 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 76 
+  NAME          = HTR4_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 490 
+  BYTES         = 1 
+  DESCRIPTION = "Heater 4 (on spectrometer housing) power;
+                 0 =off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 77 
+  NAME          = VNIR_PRI_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 492 
+  BYTES         = 1 
+  DESCRIPTION   = "VNIR FPU primary power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 78 
+  NAME          = HTR1_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 494 
+  BYTES         = 1 
+  DESCRIPTION = "Heater 1 (on gimbal electronics housing) power;
+                 0 = off, 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 79 
+  NAME          = HTR2_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 496 
+  BYTES         = 1 
+  DESCRIPTION = "Heater 2 (on gimbal electronics housing) power;
+                 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 80 
+  NAME          = COOL_PRI_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 498 
+  BYTES         = 1 
+  DESCRIPTION   = "Cooler primary power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 81 
+  NAME          = HOP_HTR1_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 500 
+  BYTES         = 1 
+  DESCRIPTION   = "HOP heater 1 power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 82 
+  NAME          = HOP_HTR2_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 502 
+  BYTES         = 1 
+  DESCRIPTION   = "HOP heater 2 power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 83 
+  NAME          = COVER_TELLTALE_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 504 
+  BYTES         = 1 
+  DESCRIPTION   = "Imager cover telltale power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 84 
+  NAME          = COVER_TELLTALE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 506 
+  BYTES         = 1 
+  DESCRIPTION   = "Cover telltale; 0 = not closed; 1 = closed" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 85 
+  NAME          = IR_COOL1_LEVEL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 508 
+  BYTES         = 4 
+  DESCRIPTION   = "IR Cooler 1 level" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 86 
+  NAME          = IR_COOL2_LEVEL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 513 
+  BYTES         = 4 
+  DESCRIPTION   = "IR Cooler 2 level" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 87 
+  NAME          = IR_COOL3_LEVEL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 518 
+  BYTES         = 4 
+  DESCRIPTION   = "IR Cooler 3 level" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 88 
+  NAME          = IR_FLOOD1_LEVEL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 523 
+  BYTES         = 4 
+  DESCRIPTION   = "IR flood lamp 1 level" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 89 
+  NAME          = IR_FLOOD2_LEVEL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 528 
+  BYTES         = 4 
+  DESCRIPTION   = "IR flood lamp 2 level" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 90 
+  NAME          = IR_SPHERE_GOAL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 533 
+  BYTES         = 4 
+  DESCRIPTION   = "Sphere lamp closed loop goal (IR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 91 
+  NAME          = IR_SPHERE_LEVEL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 538 
+  BYTES         = 4 
+  DESCRIPTION = "Sphere lamp level (IR); relevant to open-loop
+                 only" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 92 
+  NAME          = IR_SOURCE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 543 
+  BYTES         = 1 
+  DESCRIPTION = "IR data source; 0 = detector; 1 - 7 = test
+                 pattern" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 93 
+  NAME          = IR_SHUT_LED 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 545 
+  BYTES         = 1 
+  DESCRIPTION = "Shutter fiducial LED power (IR); 0 = off;
+                 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 94 
+  NAME          = IR_SPHERE_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 547 
+  BYTES         = 1 
+  DESCRIPTION   = "IR sphere lamp power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 95 
+  NAME          = IR_FLOOD1_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 549 
+  BYTES         = 1 
+  DESCRIPTION   = "Flood lamp 1 power (IR); 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 96 
+  NAME          = IR_FLOOD2_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 551 
+  BYTES         = 1 
+  DESCRIPTION   = "Flood lamp 2 power (IR); 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 97 
+  NAME          = IR_COOL1_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 553 
+  BYTES         = 1 
+  DESCRIPTION   = "IR cooler 1 power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 98 
+  NAME          = IR_COOL2_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 555 
+  BYTES         = 1 
+  DESCRIPTION   = "IR cooler 2 power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 99 
+  NAME          = IR_COOL3_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 557 
+  BYTES         = 1 
+  DESCRIPTION   = "IR cooler 3 power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 100 
+  NAME          = IR_LVDS_1 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 559 
+  BYTES         = 1 
+  DESCRIPTION = "IR LVDS driver #1 enable; 0 = disabled;
+                 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 101 
+  NAME          = IR_LVDS_2 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 561 
+  BYTES         = 1 
+  DESCRIPTION = "IR LVDS driver #2 enable; 0 = disabled;
+                 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 102 
+  NAME          = IR_DAC_POWER 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 563 
+  BYTES         = 1 
+  DESCRIPTION = "IR DAC power (for coolers and lamps); 0 = off;
+                 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 103 
+  NAME          = IR_DAC_PD 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 565 
+  BYTES         = 1 
+  DESCRIPTION = "IR DAC power down; 0 = running; 1 = powered
+                 down" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 104 
+  NAME          = IR_ANA_5V_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 567 
+  BYTES         = 1 
+  DESCRIPTION   = "IR analog 5V power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 105 
+  NAME          = IR_ADC_Q1_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 569 
+  BYTES         = 1 
+  DESCRIPTION = "IR detector quadrant #1 A/D power; 0 = off;
+                 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 106 
+  NAME          = IR_ADC_Q2_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 571 
+  BYTES         = 1 
+  DESCRIPTION = "IR detector quadrant #2 A/D power; 0 = off;
+                 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 107 
+  NAME          = IR_ADC_Q3_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 573 
+  BYTES         = 1 
+  DESCRIPTION = "IR detector quadrant #3 A/D power; 0 = off;
+                 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 108 
+  NAME          = IR_ADC_Q4_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 575 
+  BYTES         = 1 
+  DESCRIPTION = "IR detector quadrant #4 A/D power; 0 = off;
+                 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 109 
+  NAME          = IR_BIAS_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 577 
+  BYTES         = 1 
+  DESCRIPTION   = "IR detector bias power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 110 
+  NAME          = IR_AMP_HI_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 579 
+  BYTES         = 1 
+  DESCRIPTION   = "IR detector amp high power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 111 
+  NAME          = IR_CLOCK_DRIVE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 581 
+  BYTES         = 1 
+  DESCRIPTION   = "IR detector clock driver; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 112 
+  NAME          = IR_COOLER_TEMP3_CONV 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 583 
+  BYTES         = 1 
+  DESCRIPTION = "IR cooler temperature 3 conversion enable;
+                 disabling turns off power to temperature sensor
+                 in case of introduced noise in detector;
+                 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 113 
+  NAME          = IR_COOLER_TEMP2_CONV 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 585 
+  BYTES         = 1 
+  DESCRIPTION = "IR cooler temperature 2 conversion enable;
+                 disabling turns off power to temperature sensor
+                 in case of introduced noise in detector;
+                 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 114 
+  NAME          = IR_COOLER_TEMP1_CONV 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 587 
+  BYTES         = 1 
+  DESCRIPTION = "IR cooler temperature 1 conversion enable;
+                 disabling turns off power to temperature sensor
+                 in case of introduced noise in detector;
+                 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 115 
+  NAME          = IR_TEMP2_CONV 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 589 
+  BYTES         = 1 
+  DESCRIPTION = "IR detector temperature 2 conversion enable;
+                 disabling turns off power to temperature sensor
+                 in case of introduced noise in detector;
+                 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 116 
+  NAME          = IR_TEMP1_CONV 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 591 
+  BYTES         = 1 
+  DESCRIPTION = "IR detector temperature 1 conversion enable;
+                 disabling turns off power to temperature sensor
+                 in case of introduced noise in detector;
+                 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 117 
+  NAME          = IR_SHUTTER_MOTOR_CURRENT_CONV 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 593 
+  BYTES         = 1 
+  DESCRIPTION = "Shutter motor current conversion enable (IR);
+                 disabling turns off power to current sensor in
+                 case of introduced noise in detector;
+                 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 118 
+  NAME          = IR_MUX_TEMP_CONV 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 595 
+  BYTES         = 1 
+  DESCRIPTION = "IR multiplexed temperature conversion enable;
+                 disabling turns off power to temperature sensor
+                 in case of introduced noise in detector;
+                 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 119 
+  NAME          = IR_SHUT_ENB 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 597 
+  BYTES         = 1 
+  DESCRIPTION   = "Shutter motor phase enabled; 0 - 3 (IR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 120 
+  NAME          = IR_SHUT_PHASE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 599 
+  BYTES         = 1 
+  DESCRIPTION   = "Shutter motor phase; 0 - 3 (IR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 121 
+  NAME          = IR_DAC_STATE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 601 
+  BYTES         = 1 
+  DESCRIPTION   = "IR DAC power state; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 122 
+  NAME          = IR_SHUT_FID 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 603 
+  BYTES         = 1 
+  DESCRIPTION = "Shutter fiducial LED (IR); 0 = off;
+                 1 = on (fiduciated)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 123 
+  NAME          = IR_ADC_Q1_STATE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 605 
+  BYTES         = 1 
+  DESCRIPTION = "IR detector quadrant #1 A/D latch-up;
+                 0 = OK; 1 = latched" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 124 
+  NAME          = IR_ADC_Q2_STATE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 607 
+  BYTES         = 1 
+  DESCRIPTION = "IR detector quadrant #2 A/D latch-up;
+                 0 = OK; 1 = latched" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 125 
+  NAME          = IR_ADC_Q3_STATE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 609 
+  BYTES         = 1 
+  DESCRIPTION = "IR detector quadrant #3 A/D latch-up;
+                 0 = OK; 1 = latched" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 126 
+  NAME          = IR_ADC_Q4_STATE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 611 
+  BYTES         = 1 
+  DESCRIPTION = "IR detector quadrant #4 A/D latch-up;
+                 0 = OK; 1 = latched" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 127 
+  NAME          = VNIR_FLOOD1_LEVEL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 613 
+  BYTES         = 4 
+  DESCRIPTION   = "VNIR flood lamp 1 level" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 128 
+  NAME          = VNIR_FLOOD2_LEVEL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 618 
+  BYTES         = 4 
+  DESCRIPTION   = "VNIR flood lamp 2 level" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 129 
+  NAME          = VNIR_SPHERE_GOAL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 623 
+  BYTES         = 4 
+  DESCRIPTION   = "VNIR sphere lamp closed-loop goal" 
+
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 130 
+  NAME          = VNIR_SPHERE_LEVEL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 628 
+  BYTES         = 4 
+  DESCRIPTION = "VNIR sphere lamp level; relevant to open-loop
+                 operation only" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 131 
+  NAME          = VNIR_HEATER 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 633 
+  BYTES         = 1 
+  DESCRIPTION   = "VNIR heater; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 132 
+  NAME          = VNIR_SOURCE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 635 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR data source; 0 = detector;
+                 1 - 7 = test pattern" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 133 
+  NAME          = VNIR_SHUT_LED 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 637 
+  BYTES         = 1 
+  DESCRIPTION = "Shutter fiducial LED power (VNIR);
+                 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 134 
+  NAME          = VNIR_SPHERE_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 639 
+  BYTES         = 1 
+  DESCRIPTION   = "VNIR sphere lamp power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 135 
+  NAME          = VNIR_FLOOD1_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 641 
+  BYTES         = 1 
+  DESCRIPTION   = "VNIR flood lamp 1 power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 136 
+  NAME          = VNIR_FLOOD2_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 643 
+  BYTES         = 1 
+  DESCRIPTION   = "VNIR flood lamp 2 power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 137 
+  NAME          = VNIR_LVDS_1 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 645 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR LVDS driver #1 enable; 0 = disabled;
+                 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 138 
+  NAME          = VNIR_LVDS_2 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 647 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR LVDS driver #2 enable;
+                 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 139 
+  NAME          = VNIR_DAC_POWER 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 649 
+  BYTES         = 1 
+  DESCRIPTION   = "VNIR DAC power (for lamps); 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 140 
+  NAME          = VNIR_DAC_PD 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 651 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR DAC power down; 0 = running;
+                 1 = power down" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 141 
+  NAME          = VNIR_ANA_5V_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 653 
+  BYTES         = 1 
+  DESCRIPTION   = "VNIR analog 5V power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 142 
+  NAME          = VNIR_ADC_Q1_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 655 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR detector quadrant #1 A/D power;
+                 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 143 
+  NAME          = VNIR_ADC_Q2_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 657 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR detector quadrant #2 A/D power;
+                 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 144 
+  NAME          = VNIR_ADC_Q3_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 659 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR detector quadrant #3 A/D power;
+                 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 145 
+  NAME          = VNIR_ADC_Q4_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 661 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR detector quadrant #4 A/D power;
+                 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 146 
+  NAME          = VNIR_CHARGE_PUMP 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 663 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR detector charge pump power; 0 = off;
+                 1 = 500 kHz; 2 = 250 kHz; 3 = 125 kHz (default)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 147 
+  NAME          = VNIR_BIAS_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 665 
+  BYTES         = 1 
+  DESCRIPTION   = "VNIR detector bias power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 148 
+  NAME          = VNIR_AMP_HI_PWR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 667 
+  BYTES         = 1 
+  DESCRIPTION   = "VNIR detector amp high power; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 149 
+  NAME          = VNIR_CLOCK_DRIVE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 669 
+  BYTES         = 1 
+  DESCRIPTION   = "VNIR detector clock driver; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 150 
+  NAME          = VNIR_TEMP2_CONV 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 671 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR detector temperature 2 conversion enable;
+                 disabling turns off power to temperature sensor
+                 in case of introduced noise in detector;
+                 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 151 
+  NAME          = VNIR_TEMP1_CONV 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 673 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR detector temperature 1 conversion enable;
+                 disabling turns off power to temperature sensor
+                 in case of introduced noise in detector;
+                 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 152 
+  NAME          = VNIR_SHUTTER_MOTOR_CURRENT_CONV 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 675 
+  BYTES         = 1 
+  DESCRIPTION = "Shutter motor current conversion enable;
+                 disabling turns off power to current sensor in
+                 case of introduced noise in detector;
+                 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 153 
+  NAME          = VNIR_MUX_TEMP_CONV 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 677 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR multiplexed temperature conversion enable;
+                 disabling turns off power to temperature sensor
+                 in case of introduced noise in detector;
+                 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 154 
+  NAME          = VNIR_SHUT_ENB 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 679 
+  BYTES         = 1 
+  DESCRIPTION   = "Shutter motor phase enabled; 0 - 3 (VNIR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 155 
+  NAME          = VNIR_SHUT_PHASE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 681 
+  BYTES         = 1 
+  DESCRIPTION   = "Shutter motor phase; 0 - 3  (VNIR)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 156 
+  NAME          = VNIR_DAC_STATE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 683 
+  BYTES         = 1 
+  DESCRIPTION   = "VNIR DAC power state; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 157 
+  NAME          = VNIR_SHUTTER_FID 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 685 
+  BYTES         = 1 
+  DESCRIPTION = "Shutter fiducial LED (VNIR); 0 = off;
+                 1 = on (fiduciated)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 158 
+  NAME          = VNIR_ADC_Q1_STATE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 687 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR detector quadrant #1 A/D latch-up; 0 = OK;
+                 1 = latched" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 159 
+  NAME          = VNIR_ADC_Q2_STATE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 689 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR detector quadrant #2 A/D latch-up; 0 = OK;
+                 1 = latched" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 160 
+  NAME          = VNIR_ADC_Q3_STATE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 691 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR detector quadrant #3 A/D latch-up; 0 = OK;
+                 1 = latched" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 161 
+  NAME          = VNIR_ADC_Q4_STATE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 693 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR detector quadrant #4 A/D latch-up; 0 = OK;
+                 1 = latched" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 162 
+  NAME          = STATUS_INT 
+  DATA_TYPE     = ASCII_INTEGER 
+  UNIT          = SECOND 
+  START_BYTE    = 695 
+  BYTES         = 5 
+  DESCRIPTION = "Interval at which analog digital and software
+                 status are reported in status packets to low-
+                 speed telemetry" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 163 
+  NAME          = MACRO_BLOCKS 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 701 
+  BYTES         = 5 
+  DESCRIPTION   = "Number of macro blocks free" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 164 
+  NAME          = TLM_VOLUME 
+  DATA_TYPE     = ASCII_INTEGER 
+  UNIT          = KB 
+  START_BYTE    = 707 
+  BYTES         = 5 
+  DESCRIPTION = "Telemetry volume produced on the low speed
+                 engineering channel since the last CRM_STAT_CLR
+                 command" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 165 
+  NAME          = WATCH_ADDR 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 713 
+  BYTES         = 5 
+  DESCRIPTION   = "Memory watch address" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 166 
+  NAME          = WATCH_MEM_ID 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 719 
+  BYTES         = 3 
+  DESCRIPTION   = "Memory watch ID (page number)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 167 
+  NAME          = WATCH_DATA 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 723 
+  BYTES         = 5 
+  DESCRIPTION   = "Watched memory" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 168 
+  NAME          = SW_VERSION 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 729 
+  BYTES         = 3 
+  DESCRIPTION   = "Software version number" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 169 
+  NAME          = ALARM_ID 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 733 
+  BYTES         = 3 
+  DESCRIPTION   = "Latest alarm ID" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 170 
+  NAME          = ALARM_TYPE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 737 
+  BYTES         = 1 
+  DESCRIPTION = "Latest alarm type; 0 = persistent;
+                 1 = transient" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 171 
+  NAME          = ALARM_COUNT 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 739 
+  BYTES         = 3 
+  DESCRIPTION   = "Count of alarms" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 172 
+  NAME          = CMD_EXEC 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 743 
+  BYTES         = 3 
+  DESCRIPTION = "Commands executed since the last CRM_STAT_CLR
+                 command" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 173 
+  NAME          = CMD_REJECT 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 747 
+  BYTES         = 3 
+  DESCRIPTION = "Commands rejected since the last CRM_STAT_CLR
+                 command" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 174 
+  NAME          = MAC_CMD_EXEC 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 751 
+  BYTES         = 3 
+  DESCRIPTION = "Macro commands executed since the last
+                 CRM_STAT_CLR command" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 175 
+  NAME          = MAC_CMD_REJECT 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 755 
+  BYTES         = 3 
+  DESCRIPTION = "Macro commands rejected since the last
+                 CRM_STAT_CLR command" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 176 
+  NAME          = MAC_ID 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 759 
+  BYTES         = 3 
+  DESCRIPTION   = "ID of most recent macro executed" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 177 
+  NAME          = MACRO_LEARN 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 763 
+  BYTES         = 1 
+  DESCRIPTION = "Macro learn mode; in learn mode commands are
+                 appended to macros in memory; when not in learn
+                 mode commands are executed; 0 = not learning;
+                 1 = learning" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 178 
+  NAME          = MONITOR_RESPONSE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 765 
+  BYTES         = 1 
+  DESCRIPTION = "Monitor response enabling; if enabled a
+                 persistent out-of-limits condition will cause an
+                 onboard safing macro to be executed;
+                 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 179 
+  NAME          = MEM_WRITE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 767 
+  BYTES         = 1 
+  DESCRIPTION = "Memory write enabling; required to upload data
+                 structures with commandable monitor limits or
+                 pixel procesing values; 0 = disabled;
+                 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 180 
+  NAME          = IR_SPECTRA 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 769 
+  BYTES         = 5 
+  DESCRIPTION   = "Last value for number of IR spectra to collect" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 181 
+  NAME          = VNIR_SPECTRA 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 775 
+  BYTES         = 5 
+  DESCRIPTION = "Last value for number of VNIR spectra to
+                 collect" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 182 
+  NAME          = COOL_1_SETPOINT 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 781 
+  BYTES         = 5 
+  DESCRIPTION = "Cooler 1 temperature goal; value corresponds to
+                 temperature goal for COOLER_TEMP1" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 183 
+  NAME          = COOL_2_SETPOINT 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 787 
+  BYTES         = 5 
+  DESCRIPTION = "Cooler 2 temperature goal; value corresponds to
+                 temperature goal for COOLER_TEMP2" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 184 
+  NAME          = COOL_3_SETPOINT 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 793 
+  BYTES         = 5 
+  DESCRIPTION = "Cooler 3 temperature goal; value corresponds to
+                 temperature goal for COOLER_TEMP3" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 185 
+  NAME          = VNIR_HEATER_GOAL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 799 
+  BYTES         = 5 
+  DESCRIPTION = "VNIR heater temperature goal; value corresponds
+                 to temperature goal for VNIR_DETECTOR_TEMP1" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 186 
+  NAME          = HEATER_1_GOAL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 805 
+  BYTES         = 5 
+  DESCRIPTION = "Heater 1 (on gimbal electronics housing) goal;
+                 value corresponds to temperature goal for
+                 OSU_CAVITY_TEMP_VNIR" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 187 
+  NAME          = HEATER_2_GOAL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 811 
+  BYTES         = 5 
+  DESCRIPTION = "Heater 2 (on gimbal electronics housing) goal;
+                 value corresponds to temperature goal for
+                 OSU_CAVITY_TEMP_VNIR" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 188 
+  NAME          = HEATER_3_GOAL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 817 
+  BYTES         = 5 
+  DESCRIPTION = "Heater 3 (on cooler radiator) goal; value
+                 corresponds to temperature goal for
+                 OSU_CAVITY_TEMP_IR" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 189 
+  NAME          = HEATER_4_GOAL 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 823 
+  BYTES         = 5 
+  DESCRIPTION = "Heater 4 (on spectrometer housing) goal; value
+                 corresponds to temperature goal for
+                 SPECT_CAVITY_TEMP_IR" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 190 
+  NAME          = HEATER_1_HYSTERESIS 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 829 
+  BYTES         = 3 
+  DESCRIPTION = "Heater 1 (on gimbal electronics housing)
+                 hysteresis" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 191 
+  NAME          = HEATER_2_HYSTERESIS 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 833 
+  BYTES         = 3 
+  DESCRIPTION = "Heater 2 (on gimbal electronics housing)
+                 hysteresis" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 192 
+  NAME          = HEATER_3_HYSTERESIS 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 837 
+  BYTES         = 3 
+  DESCRIPTION   = "Heater 3 (on cooler radiator) hysteresis" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 193 
+  NAME          = HEATER_4_HYSTERESIS 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 841 
+  BYTES         = 3 
+  DESCRIPTION   = "Heater 4 (on spectrometer housing) hysteresis" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 194 
+  NAME          = VNIR_HEATER_HYSTERESIS 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 845 
+  BYTES         = 3 
+  DESCRIPTION   = "VNIR heater hysteresis" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 195 
+  NAME          = TARGET_ID 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 849 
+  BYTES         = 10 
+  DESCRIPTION   = "Target ID" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 196 
+  NAME          = TARGET_TIME 
+  DATA_TYPE     = ASCII_INTEGER 
+  UNIT          = SECOND 
+  START_BYTE    = 860 
+  BYTES         = 10 
+  DESCRIPTION = "Time of target closest approach (whole second
+                 component); same scale as EXPOSURE_MET" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 197 
+  NAME          = TARGET_SUBSECONDS 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 871 
+  BYTES         = 5 
+  DESCRIPTION = "Time of target closest approach (fractional
+                 second component); units of (1/2^16 seconds)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 198 
+  NAME          = PROFILE_ID 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 877 
+  BYTES         = 5 
+  DESCRIPTION   = "Profile ID" 
+
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 199 
+  NAME          = SCAN_STATUS_WORD 
+  DATA_TYPE     = CHARACTER 
+  START_BYTE    = 883 
+  BYTES         = 16 
+  DESCRIPTION = "Scan motor status at start of second; Byte 1:
+                 Platform direction; 0 = Down; 1 = Up; Byte 2:
+                 Latched (i.e. sticky) index pulse; 0 = No index;
+                 1 = Index seen; Byte 3: Latched (i.e. sticky)
+                 limit switch #2; 0 = No limit; 1 = Limit seen;
+                 Byte 4: Latched (i.e. sticky) limit switch #1;
+                 0 = No limit; 1 = Limit seen; Byte 5: Raw
+                 inphase signal; 0 - 1; Byte 6: Raw quadrature
+                 signal; 0 - 1; Byte 7: Raw index signal; 0 = No
+                 index; 1 = Index; Byte 8: Hall Sensor; 0 - 7;
+                 Bytes 9-16 Encoded scan platform position;
+                 signed integer" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 200 
+  NAME          = SCAN_CONTROL_WORD 
+  DATA_TYPE     = CHARACTER 
+  START_BYTE    = 900 
+  BYTES         = 16 
+  DESCRIPTION = "Scan motor control word; Byte 1: Enable/disable
+                 encoder position counter; 0 = disable; 1 =
+                 enable; Byte 2: Reset (i.e. zero) encoder
+                 position counter; 0 = no operation; 1 = reset;
+                 Byte 3: Reset index latch; 0 = no operation; 1 =
+                 reset; Byte 4: Enable/disable motor drive; 0 =
+                 disabled; 1 = enabled; Byte 5: Enable/disable
+                 sending external clock (for ground testing); 0 =
+                 disabled; 1 = enabled; Byte 6: Arm index latch;
+                 0 = no operation; 1 = index; Byte 7: Latch Hall
+                 inputs; 0 no operation; 1 = latched; Byte 8:
+                 Enable/disable computer control of Hall outputs;
+                 0 = automatic; 1 = computer; Byte 9: Coarse or
+                 fine control of motor drive DAC; 0 = coarse; 1 =
+                 fine; Byte 10: Reset limit latches; 0 = no
+                 operation; 1 = reset; Byte 11: Hall outputs (0 -
+                 7); Bytes 12-16: motor drive DAC (signed
+                 integer)" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 201 
+  NAME          = SLEW_ANGLE 
+  DATA_TYPE     = ASCII_REAL 
+  UNIT          = MICRORADIAN 
+  START_BYTE    = 917 
+  BYTES         = 11 
+  DESCRIPTION = "Slew angle commanded via the command
+                 CRM_SCA_ANGLE" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 202 
+  NAME          = OFFSET_ANGLE 
+  DATA_TYPE     = ASCII_REAL 
+  UNIT          = MICRORADIAN 
+  START_BYTE    = 929 
+  BYTES         = 11 
+  DESCRIPTION = "Offset angle commanded via the command
+                 CRM_SCA_OFF_ANGLE" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 203 
+  NAME          = OFFSET_RATE 
+  DATA_TYPE     = ASCII_REAL 
+  UNIT          = "MICRORADIAN/SECOND" 
+  START_BYTE    = 941 
+  BYTES         = 11 
+  DESCRIPTION = "Offset rate commanded via the command
+                 CRM_SCA_OFF_RATE" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 204 
+  NAME          = GOAL_ANGLE 
+  DATA_TYPE     = ASCII_REAL 
+  UNIT          = MICRORADIAN 
+  START_BYTE    = 953 
+  BYTES         = 11 
+  DESCRIPTION = "The angle that the sytem is currently trying to
+                 reach" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 205 
+  NAME          = VNIR_HTR_MODE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 965 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR heater control mode; 0 = off; 1 = on;
+                 2 = software control" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 206 
+  NAME          = OBSERVE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 967 
+  BYTES         = 1 
+  DESCRIPTION   = "Observation state; 0 = idle; 1 = observing" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 207 
+  NAME          = OFFSET_ADJUST 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 969 
+  BYTES         = 1 
+  DESCRIPTION = "Scan offset adjustment; 0 = disabled;
+                 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 208 
+  NAME          = HTR_1_MODE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 971 
+  BYTES         = 1 
+  DESCRIPTION = "Heater 1 (on gimbal electronics housing) control
+                 mode; 0 = off; 1 = on; 2 = software control" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 209 
+  NAME          = HTR_2_MODE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 973 
+  BYTES         = 1 
+  DESCRIPTION = "Heater 2 (on gimbal electronics housing) control
+                 mode; 0 = off; 1 = on; 2 = software control" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 210 
+  NAME          = HTR_3_MODE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 975 
+  BYTES         = 1 
+  DESCRIPTION = "Heater 3 (on cooler radiator) control mode; 0 =
+                 off; 1 = on; 2 = software control" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 211 
+  NAME          = HTR_4_MODE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 977 
+  BYTES         = 1 
+  DESCRIPTION = "Heater 4 (on spectrometer housing) control mode;
+                 0 = off; 1 = on; 2 = software control" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 212 
+  NAME          = COVER_MODE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 979 
+  BYTES         = 1 
+  DESCRIPTION = "Cover deployment enabling; 0 = deployment
+                 disabled; 1 = deployment enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 213 
+  NAME          = SCAN_MODE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 981 
+  BYTES         = 1 
+  DESCRIPTION = "Scan platform control mode; 0 = off; 1 =
+                 holding; the gimbal is held at the current
+                 position; 2 = slewing; the gimbal is moved to a
+                 commanded angle; 3 = following a profile; the
+                 gimbal follows a computed and uploaded profile;
+                 4 = home; the gimbal searches for its index
+                 fiducial" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 214 
+  NAME          = OBS_MAC_ID 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 983 
+  BYTES         = 3 
+  DESCRIPTION   = "ID of most recent observation macro executed" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 215 
+  NAME          = SHUTTER_POS 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 987 
+  BYTES         = 2 
+  DESCRIPTION = "Shutter position from 0 to 32; nominal open is
+                 3; viewing sphere is 17; closed is 32" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 216 
+  NAME          = SHUTTER_DRIVE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 990 
+  BYTES         = 1 
+  DESCRIPTION = "Shutter drive selection; VNIR channel for
+                 nominal use; IR is backup; both together is
+                 contingency for stuck shutter; 0 = IR side; 1 =
+                 VNIR side; 2 = both sides" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 217 
+  NAME          = SCAN_LOG_ENB 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 992 
+  BYTES         = 1 
+  DESCRIPTION = "Scan platform logging enabling; with this
+                 enabled requests for spectra return high-rate
+                 scan diagnostic data; 0 = off; 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 218 
+  NAME          = IR_TEMP_MON 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 994 
+  BYTES         = 1 
+  DESCRIPTION = "IR temperature monitor enabling; 0 = off;
+                 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 219 
+  NAME          = IR_EXPOSE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 996 
+  BYTES         = 3 
+  DESCRIPTION = "IR exposure time parameter; number of 1/480ths
+                 of inverse frame rate" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 220 
+  NAME          = IR_RATE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1000 
+  BYTES         = 1 
+  DESCRIPTION = "IR frame acquisition rate; 0 = 1 Hz; 1 = 3.75
+                 Hz; 2 = 5 Hz; 3 = 15 Hz; 4 = 30 Hz" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 221 
+  NAME          = VNIR_TEMP_MON 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1002 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR temperature monitor enabling; 0 = off;
+                 1 = on" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 222 
+  NAME          = VNIR_EXPOSE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1004 
+  BYTES         = 3 
+  DESCRIPTION = "VNIR exposure time parameter; number of 1/480ths
+                 of inverse frame rate" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 223 
+  NAME          = VNIR_RATE 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1008 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR frame acquisition rate; 0 = 1 Hz; 1 = 3.75
+                 Hz; 2 = 5 Hz; 3 = 15 Hz; 4 = 30 Hz" 
+
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 224 
+  NAME          = IR_FILTER 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1010 
+  BYTES         = 1 
+  DESCRIPTION = "IR wavelength filter table; which of uploadable
+                 tables 0-3" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 225 
+  NAME          = IR_BINNING 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1012 
+  BYTES         = 1 
+  DESCRIPTION = "IR spatial pixel binning mode; 0 = 1:1; 1 = 2:1;
+                 2 = 5:1; 3 = 10:1" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 226 
+  NAME          = IR_LOSSY 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1014 
+  BYTES         = 1 
+  DESCRIPTION = "IR lossy compression enabled or disabled; 12 to
+                 8 bit look-up table commanded line by line in
+                 uploaded data structure; specified 0 = disabled;
+                 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 227 
+  NAME          = IR_FAST 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1016 
+  BYTES         = 1 
+  DESCRIPTION = "IR lossless Fast compression enabled or
+                 disabled; 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 228 
+  NAME          = VNIR_FILTER 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1018 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR wavelength filter table; which of
+                 uploadable tables 0-3" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 229 
+  NAME          = VNIR_BINNING 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1020 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR spatial pixel binning mode; 0 = 1:1;
+                 1 = 2:1; 2 = 5:1; 3 = 10:1" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 230 
+  NAME          = VNIR_LOSSY 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1022 
+  BYTES         = 1 
+  DESCRIPTION = "VNIR lossy compression enabled or disabled; 12
+                 to 8 bit look-up table commanded line by line in
+                 uploaded data structure; specified 0 = disabled;
+                 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 231 
+  NAME          = VNIR_FAST 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1024 
+  BYTES         = 1 
+  DESCRIPTION = "Enable/disable VNIR lossless Fast compression
+                 enabled or disabled; 0 = disabled; 1 = enabled" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 232 
+  NAME          = IR_PIXEL_PROC_SUM 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1026 
+  BYTES         = 5 
+  DESCRIPTION = "IR pixel processing table CRC-CCITT checksum;
+                 the data structure containing gains offsets and
+                 which LUT to use is 480 rows and 3 columns; this
+                 is the least significant end of the sum and
+                 serves as a fingerprint" 
+END_OBJECT = COLUMN 
+
+OBJECT = COLUMN 
+  COLUMN_NUMBER = 233 
+  NAME          = VNIR_PIXEL_PROC_SUM 
+  DATA_TYPE     = ASCII_INTEGER 
+  START_BYTE    = 1032 
+  BYTES         = 5 
+  DESCRIPTION = "VNIR processing table CRC-CCITT checksum; the
+                 data structure containing gains offsets and
+                 which LUT to use is 480 rows and 3 columns; this
+                 is the least significant end of the sum and
+                 serves as a fingerprint" 
+END_OBJECT = COLUMN 
+END

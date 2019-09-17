@@ -2387,20 +2387,9 @@ rfImage(dataKey *objSize, Var * ob){
 		return 0;
 	}
 
-	// TODO remove the drd debugging statements
 	data = dv_LoadImage_New(fp, fileName, objSize->dptr, objSize->objDesc);
 	if (data != NULL) {
-		unsigned char *flex; // drd
-		int i; // drd
-		char lclName[]="drddata";
-		//add_struct(ob, fix_name("DATA"), data); // drd this is what was here
-		add_struct(ob, lclName, data);
-		printf("Added the data v at %p to the object\n", data); // drd
-		flex = (unsigned char *) V_DATA(data); // drd
-		printf("Printing out 8 bytes from the data area of 'Var *data' %p at %p:\n", data, flex); // drd
-		for(i = 0; i < 8; i++){ // drd
-			printf("0x%02X\n", flex[i]); // drd
-		} // drd
+		add_struct(ob, fix_name("DATA"), data);
 		rc=1;
 	}
 
