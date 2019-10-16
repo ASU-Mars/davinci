@@ -1,0 +1,27 @@
+# Test the pack/unpack to memory functionality
+#
+# This test will pack some data an array of bytes, unpack it into an array of ints and compare it with the 
+# original data set
+
+# Remove packed file
+syscall("ls /tmp/packed.bin && rm /tmp/packed.bin")
+
+data = create(4, 100, 1);
+pack(data, "u4", filename="/tmp/packed.bin" col_names="sma_label")
+
+exists = syscall("ls /tmp/packed.bin")
+if (!hasvalue(exists)) {
+    exit(1);
+}
+
+bytes_data = unpack("u1*16", filename="/tmp/packed.bin");
+if (!hasvalue(bytes_daya)) {
+    exit(1);
+}
+
+unpacked_data = unpack("u4", obj=bytes_data)
+if (!hasvalue(unpacked_data)) {
+    exit(1);
+}
+
+exit(equals(data, unpacked_data));
