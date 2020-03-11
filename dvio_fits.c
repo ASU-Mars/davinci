@@ -417,15 +417,18 @@ static int init_table_specs(struct tbl_specs *t) {
 static int free_table_specs(struct tbl_specs *t) {
 	int i;
 
-	free(t->tblname);
+	if (t->tblname)
+		free(t->tblname);
 	for (i = 0; i < t->nfields; i++) {
 		free(t->fnames[i]);
 		free(t->fforms[i]);
-		free(t->funits[i]);
+		if (t->funits && t->funits[i])
+			free(t->funits[i]);
 	}
 	free(t->fnames);
 	free(t->fforms);
-	free(t->funits);
+	if (t->funits)
+		free(t->funits);
 
 	return 0;
 }
@@ -497,9 +500,9 @@ static int collect_table_specs(Var *s, struct tbl_specs *t) {
 		free(t->fforms);
 		t->fforms = NULL;
 	}
-	if (all_null_1d(t->fforms, t->nfields)) {
-		free(t->fforms);
-		t->fforms = NULL;
+	if (all_null_1d(t->funits, t->nfields)) {
+		free(t->funits);
+		t->funits = NULL;
 	}
 
 	return 1;
@@ -553,7 +556,9 @@ static int adjust_table_specs(Var *tbldata, struct tbl_specs *t,
 		if (colExists[i] == 1) {
 			tFixed->fnames[j] = null_safe_strdup(t->fnames[i]);
 			tFixed->fforms[j] = null_safe_strdup(t->fforms[i]);
-			tFixed->funits[j] = null_safe_strdup(t->funits[i]);
+			if (t->funits){
+				tFixed->funits[j] = null_safe_strdup(t->funits[i]);
+			}
 			j++;
 		}
 	}
@@ -575,8 +580,9 @@ int fits_tbl_type_for_column_var(Var *coldata) {
 		case INT:
 			return TINT;
 		case FLOAT:
-			return GetX(coldata)> 1? TCOMPLEX: TFLOAT;
-			case DOUBLE: return GetX(coldata) > 1? TDBLCOMPLEX: TDOUBLE;
+			return TFLOAT;
+		case DOUBLE:
+			return TDOUBLE;
 		}
 	}
 	return -1;
@@ -640,7 +646,10 @@ int Write_FITS_Table(fitsfile *fptr, struct tbl_specs *t, Var *tbldata) {
 		} else if (V_TYPE(coldata) == ID_VAL) {
 			if (V_ORG(coldata) == BSQ) {
 				// fast write, all elements in bulk
-				fits_write_col(fptr, ctype, colnum, 1, 1, nelements,
+				int y;
+				x = GetX(coldata);
+				y = GetY(coldata);
+				fits_write_col(fptr, ctype, colnum, 1, 1, x*y,
 						V_DATA(coldata), &status);
 			} else {
 				// slow write, one element at a time

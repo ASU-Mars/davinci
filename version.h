@@ -1,8 +1,12 @@
-char *version = "@(#) daVinci Version #2.25";
+char *version = "@(#) daVinci Version #2.26";
 
 #include "build.h"
 
 /*
+  Version 2.26: Wed Mar 11 14:21:15 MST 2020
+  * write_fits() did not write numeric array columns fully
+    resulting in data truncation
+ 
   Version 2.25:
   * Fixed load_pds(), removed debug code left in that placed
     the data in the wrong structure member variable.
