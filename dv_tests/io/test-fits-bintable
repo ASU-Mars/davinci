@@ -1,0 +1,35 @@
+floatx=349
+intx=10
+stringx=10
+row_width=floatx*4+intx*4+stringx
+rows=7092
+s={ object_1={SIMPLE=1,BITPIX=8,NAXIS=0,EXTEND=1}, table={XTENSION="BINTABLE"} }
+s.table+={ EXTNAME="table",BITPIX=8,NAXIS=2,NAXIS1=row_width,NAXIS2=rows,TFIELDS=4 }
+s.table+={ TTYPE1="floats", TFORM1=sprintf("%dE",floatx) }
+s.table+={ TTYPE2="ints", TFORM2=sprintf("%dJ",intx) }
+s.table+={ TTYPE3="strings", TFORM3=sprintf("%dA",stringx) }
+s.table+={ TTYPE4="intsbip", TFORM4=sprintf("%dJ",intx) }
+s.table+={ PCOUNT=0,GCOUNT=1 }
+s.table.data={ floats=create(floatx,rows,1,format=float), ints=create(intx,rows,1,format=int), strings=clone("str",y=rows), intsbip=create(intx,rows,1,format=int,org=bip) }
+
+for(i=1;i<=rows;i+=1){
+	s.table.data.strings[,i]=sprintf("str%07d",i)
+}
+
+write_fits(s,$TMPDIR+"/foo.fits",force=1)
+fits=load_fits($TMPDIR+"/foo.fits")
+
+if (HasValue(fits)){
+	floats_match=max(abs(fits.table.data.floats-s.table.data.floats))==0
+	ints_match=max(abs(fits.table.data.ints-s.table.data.ints))==0
+	strings_match=sum(fits.table.data.strings==s.table.data.strings)==rows
+	intsbip_match=max(abs(bip(fits.table.data.intsbip)-s.table.data.intsbip))==0
+
+	if (floats_match && ints_match && strings_match && intsbip_match){
+		exit(0)
+	} else {
+		printf("floats_match=%d ints_match=%d strings_match=%d intsbip_match=%d\n", floats_match, ints_match, strings_match, intsbip_match)
+	}
+}
+
+exit(1)
