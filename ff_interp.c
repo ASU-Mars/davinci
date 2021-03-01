@@ -1,19 +1,20 @@
 #include "parser.h"
 
-int is_deleted(float f)
+int is_deleted(double f)
 {
+	// TODO do the need  to be changed?
     return (f < -1.22e34 && f > -1.24e34);
 }
 
-void cakima (size_t n, float x[], float y[], float **yd);
-Var *linear_interp(Var *v0, Var *v1, Var *v2, float ignore);
-Var *cubic_interp(Var *v0, Var *v1, Var *v2, char *type, float ignore);
+void cakima (size_t n, double x[], double y[], double **yd);
+Var *linear_interp(Var *v0, Var *v1, Var *v2, double ignore);
+Var *cubic_interp(Var *v0, Var *v1, Var *v2, char *type, double ignore);
 
 Var *
 ff_interp(vfuncptr func, Var *arg)
 {
     Var *v[3] = {NULL,NULL,NULL};
-    float ignore = MINFLOAT;
+    double ignore = MINDOUBLE;
     const char *usage = "usage: %s(y1,x1,x2,[type={'linear'|'cubic'}]";
     char *type = (char *)"";
     const char *types[] = {"linear", "cubic", NULL};
@@ -23,7 +24,7 @@ ff_interp(vfuncptr func, Var *arg)
     alist[0] = make_alist( "object",    ID_VAL,    NULL,    &v[0]);
     alist[1] = make_alist( "from",      ID_VAL,    NULL,    &v[1]);
     alist[2] = make_alist( "to",        ID_VAL,    NULL,    &v[2]);
-    alist[3] = make_alist( "ignore",    FLOAT,    NULL,    &ignore);
+    alist[3] = make_alist( "ignore",    DOUBLE,    NULL,    &ignore);
     alist[4] = make_alist( "type",    ID_ENUM,    types,    &type);
     alist[5] = make_alist( "y1",    ID_VAL,    NULL,    &v[0]);
     alist[6] = make_alist( "x1",    ID_VAL,    NULL,    &v[1]);
@@ -62,25 +63,25 @@ ff_interp(vfuncptr func, Var *arg)
 	return(out);
 }
 		
-Var *linear_interp(Var *v0, Var *v1, Var *v2, float ignore) 
+Var *linear_interp(Var *v0, Var *v1, Var *v2, double ignore) 
 {
     Var *s = NULL;
-    float *x = NULL,*y = NULL, *fdata = NULL;
+    double *x = NULL,*y = NULL, *fdata = NULL;
     size_t i, count = 0;
-    float x1,y1,x2,y2,w;
-    float *m = NULL, *c = NULL; /* slopes and y-intercepts */
+    double x1,y1,x2,y2,w;
+    double *m = NULL, *c = NULL; /* slopes and y-intercepts */
     size_t fromsz, tosz; /* number of elements in from & to arrays */
 
     fromsz = V_DSIZE(v0);
     tosz = V_DSIZE(v2);
     
-    x = (float *)calloc(fromsz, sizeof(float));
-    y = (float *)calloc(fromsz, sizeof(float));
+    x = (double *)calloc(fromsz, sizeof(double));
+    y = (double *)calloc(fromsz, sizeof(double));
 
     count = 0;
     for (i = 0 ; i < fromsz ; i++) {
-        x[count] = extract_float(v1,i);
-        y[count] = extract_float(v0,i);
+        x[count] = extract_double(v1,i);
+        y[count] = extract_double(v0,i);
         if (is_deleted(x[count]) || is_deleted(y[count]) ||
 		x[count] == ignore || y[count] == ignore) continue;
 		if (count && x[count] <= x[count-1]) {
@@ -93,9 +94,9 @@ Var *linear_interp(Var *v0, Var *v1, Var *v2, float ignore)
         count++;
     }
 
-    fdata = (float *)calloc(tosz, sizeof(float));
-    m = (float *)calloc(fromsz-1, sizeof(float));
-    c = (float *)calloc(fromsz-1, sizeof(float));
+    fdata = (double *)calloc(tosz, sizeof(double));
+    m = (double *)calloc(fromsz-1, sizeof(double));
+    c = (double *)calloc(fromsz-1, sizeof(double));
 
     /* evaluate & cache slopes & y-intercepts */
     for (i = 1; i < fromsz; i++){
@@ -104,7 +105,7 @@ Var *linear_interp(Var *v0, Var *v1, Var *v2, float ignore)
     }
 
     for (i = 0 ; i < tosz ; i++) {
-        w = extract_float(v2, i); /* output wavelength */
+        w = extract_double(v2, i); /* output wavelength */
         if (is_deleted(w)) {
             fdata[i] = -1.23e34; 
 		} else if (w == ignore) {
@@ -145,7 +146,7 @@ Var *linear_interp(Var *v0, Var *v1, Var *v2, float ignore)
     V_SIZE(s)[1] = V_SIZE(v2)[1];
     V_SIZE(s)[2] = V_SIZE(v2)[2];
     V_ORG(s) = V_ORG(v2);
-    V_FORMAT(s) = FLOAT;
+    V_FORMAT(s) = DOUBLE;
 
     free(x);
     free(y);
@@ -157,7 +158,7 @@ Var *
 ff_cinterp(vfuncptr func, Var *arg)
 {
     Var *v[3] = {NULL,NULL,NULL};
-	float ignore = MINFLOAT;
+	double ignore = MINDOUBLE;
 	char *type = NULL;
 
     Alist alist[6];
@@ -165,7 +166,7 @@ ff_cinterp(vfuncptr func, Var *arg)
     alist[1] = make_alist( "from",      ID_VAL,    NULL,    &v[1]);
     alist[2] = make_alist( "to",        ID_VAL,    NULL,    &v[2]);
     alist[3] = make_alist( "type",      ID_ENUM,    NULL,   type);
-    alist[4] = make_alist( "ignore",    FLOAT,    NULL,    &ignore);
+    alist[4] = make_alist( "ignore",    DOUBLE,    NULL,    &ignore);
     alist[5].name = NULL;
 
     if (parse_args(func, arg, alist) == 0) return(NULL);
@@ -183,12 +184,12 @@ ff_cinterp(vfuncptr func, Var *arg)
 }
 
 Var *
-cubic_interp(Var *v0, Var *v1, Var *v2, char *type, float ignore)
+cubic_interp(Var *v0, Var *v1, Var *v2, char *type, double ignore)
 {
-	float **yd, *out, *xp, *yp, *arena;
+	double **yd, *out, *xp, *yp, *arena;
 	size_t npts, nout;
 	size_t i, j;
-	float x0, x1, x, h;
+	double x0, x1, x, h;
 	int done;
 	size_t count = 0;
 	int error = 0;
@@ -197,15 +198,15 @@ cubic_interp(Var *v0, Var *v1, Var *v2, char *type, float ignore)
 	nout = V_DSIZE(v2);
 
 	/* this is the hard way */
-	yd = calloc(npts, sizeof(float *));
-	xp = calloc(npts, sizeof(float));
-	yp = calloc(npts, sizeof(float));
-	arena = calloc(npts*4, sizeof(float));
-	out = calloc(nout, sizeof(float));
+	yd = calloc(npts, sizeof(double *));
+	xp = calloc(npts, sizeof(double));
+	yp = calloc(npts, sizeof(double));
+	arena = calloc(npts*4, sizeof(double));
+	out = calloc(nout, sizeof(double));
 
 	for (i = 0 ; i < npts ; i++) {
-		xp[count] = extract_float(v1, i);
-		yp[count] = extract_float(v0, i);
+		xp[count] = extract_double(v1, i);
+		yp[count] = extract_double(v0, i);
 		yd[count] = arena + 4*count;
 		/* Handle deleted points and non-increasing data */
 		if (xp[count] == ignore || yp[count] == ignore) {
@@ -240,7 +241,7 @@ cubic_interp(Var *v0, Var *v1, Var *v2, char *type, float ignore)
 
 		x0 = xp[j];
 		x1 = xp[j+1];
-		x = extract_float(v2, i);
+		x = extract_double(v2, i);
 		if (x == ignore) {
 			out[i] = ignore;
 			i++;
@@ -263,7 +264,7 @@ cubic_interp(Var *v0, Var *v1, Var *v2, char *type, float ignore)
 		V_SIZE(v2)[0], 
 		V_SIZE(v2)[1], 
 		V_SIZE(v2)[2], 
-		FLOAT, 
+		DOUBLE, 
 		out));
 }
 
@@ -352,7 +353,7 @@ Author:  Dave Hale, Colorado School of Mines c. 1989, 1990, 1991
 
 // #include <cwp.h>
 
-void cakima (size_t n, float x[], float y[], float **yd)
+void cakima (size_t n, double x[], double y[], double **yd)
 /*****************************************************************************
 Compute cubic interpolation coefficients via Akima's method
 ******************************************************************************
@@ -390,7 +391,7 @@ Modified:  Dave Hale, Colorado School of Mines, 02/28/91
 *****************************************************************************/
 {
 	size_t i;
-	float sumw,yd1fx,yd1lx,dx,divdf3;
+	double sumw,yd1fx,yd1lx,dx,divdf3;
 
 	/* copy ordinates into output array */
 	for (i=0; i<n; i++)
