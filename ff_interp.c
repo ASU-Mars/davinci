@@ -2,22 +2,24 @@
 
 int is_deleted(double f)
 {
-	// TODO do the need  to be changed?
-    return (f < -1.22e34 && f > -1.24e34);
+	// TODO do the need  to be changed? - not sure why is this here
+    //return (f < -1.22e34 && f > -1.24e34);
+	return 0;
 }
 
 void cakima (size_t n, double x[], double y[], double **yd);
 Var *linear_interp(Var *v0, Var *v1, Var *v2, double ignore);
 Var *cubic_interp(Var *v0, Var *v1, Var *v2, char *type, double ignore);
+Var *lookup(Var *v0, Var *v1, Var *v2, int before, double ignore);
 
 Var *
 ff_interp(vfuncptr func, Var *arg)
 {
     Var *v[3] = {NULL,NULL,NULL};
     double ignore = MINDOUBLE;
-    const char *usage = "usage: %s(y1,x1,x2,[type={'linear'|'cubic'}]";
+    const char *usage = "usage: %s(y1,x1,x2,[type={'linear'|'cubic'|'nearest'|'nearest_before'}]";
     char *type = (char *)"";
-    const char *types[] = {"linear", "cubic", NULL};
+    const char *types[] = {"linear", "cubic", "nearest", "nearest_before", NULL};
     Var *out;
 
     Alist alist[9];
@@ -57,11 +59,113 @@ ff_interp(vfuncptr func, Var *arg)
 		out = linear_interp(v[0], v[1], v[2], ignore);
 	} else if (!strncasecmp(type, "cubic", 5)) {
 		out = cubic_interp(v[0], v[1], v[2], type, ignore);
+	} else if (!strncasecmp(type, "nearest_before", 14)) {
+		out = lookup(v[0], v[1], v[2], 1, ignore);
+	} else if (!strncasecmp(type, "nearest", 7)) {
+		out = lookup(v[0], v[1], v[2], 0, ignore);
 	} else {
 		parse_error("%s: Unrecognized type: %s\n", func->name, type);
 	}
 	return(out);
 }
+
+static int
+dbl_cmp(const void *a, const void *b){
+	return *((double *)a)-*((double *)b);
+}
+
+Var *lookup(Var *v0, Var *v1, Var *v2, int before, double ignore) 
+{
+    Var *s = NULL;
+    double *x = NULL,*y = NULL, *fdata = NULL;
+    size_t i, count = 0;
+    double x1,y1,x2,y2,w;
+    double *m = NULL, *c = NULL; /* slopes and y-intercepts */
+    size_t fromsz, tosz; /* number of elements in from & to arrays */
+
+    fromsz = V_DSIZE(v0);
+    tosz = V_DSIZE(v2);
+    
+    x = (double *)calloc(fromsz, sizeof(double));
+    y = (double *)calloc(fromsz, sizeof(double));
+
+    count = 0;
+    for (i = 0 ; i < fromsz ; i++) {
+        x[count] = extract_double(v1,i);
+        y[count] = extract_double(v0,i);
+        if (is_deleted(x[count]) || is_deleted(y[count]) ||
+		x[count] == ignore || y[count] == ignore) continue;
+		if (count && x[count] <= x[count-1]) {
+			parse_error("Error: data is not monotonically increasing x1[%d] = %f", i, x[count]);
+			free(fdata);
+			free(x);
+			free(y);
+			return(NULL);
+		}
+        count++;
+    }
+
+
+	//bsearch(key, x, fromsz, sizeof(double), dbl_cmp);
+    fdata = (double *)calloc(tosz, sizeof(double));
+
+    for (i = 0 ; i < tosz ; i++) {
+        w = extract_double(v2, i); /* output wavelength */
+        if (is_deleted(w)) {
+            fdata[i] = -1.23e34; 
+		} else if (w == ignore) {
+			fdata[i] = ignore;
+        } else {
+
+            /*
+            ** Locate the segment containing the x-value of "w".
+            ** Assume that x-values are monotonically increasing.
+            */
+            size_t st = 0, ed = fromsz-1, mid;
+            
+            while((ed-st) > 1){
+                mid = (st+ed)/2;
+                if (w > x[mid])     { st = mid; }
+                else if (w < x[mid]){ ed = mid; }
+                else                { st = ed = mid; }
+            }
+            x2 = x[ed]; y2 = y[ed];
+            x1 = x[st]; y1 = y[st];
+
+            if (y2 == y1) {
+                fdata[i] = y1;
+            } else {
+				if (before){
+					fdata[i] = y[st];
+				}
+				else {
+					if (fabs(x[ed]-w) < fabs(x[st]-w)) {
+						fdata[i] = y[ed];
+					}
+					else {
+						fdata[i] = y[st];
+					}
+				}
+            }
+        }
+    }
+
+    s = newVar();
+    V_TYPE(s) = ID_VAL;
+
+    V_DATA(s) = (void *)fdata;
+    V_DSIZE(s) = V_DSIZE(v2);
+    V_SIZE(s)[0] = V_SIZE(v2)[0];
+    V_SIZE(s)[1] = V_SIZE(v2)[1];
+    V_SIZE(s)[2] = V_SIZE(v2)[2];
+    V_ORG(s) = V_ORG(v2);
+    V_FORMAT(s) = DOUBLE;
+
+    free(x);
+    free(y);
+    return(s);
+}
+
 		
 Var *linear_interp(Var *v0, Var *v1, Var *v2, double ignore) 
 {
