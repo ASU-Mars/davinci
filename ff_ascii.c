@@ -22,7 +22,7 @@ dv_getline(char **ptr, FILE *fp, int maxlinecount)
     *ptr = NULL;
     return(-1);
   }
-  while (strchr(line, '\n') == NULL && strchr(line, '\r') == NULL) {
+  while (strchr(line, '\n') == NULL && strchr(line, '\r') == NULL) { // TODO null in string handling
     line = (char *)my_realloc(line, len*2+1);
     if ((fgets(line+len-1, len, fp)) == NULL) break;
     len = len*2-1;

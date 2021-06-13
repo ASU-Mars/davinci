@@ -50,9 +50,9 @@ typedef unsigned char byte;
 typedef struct
 {
 	char type;					//type constant from above defines
-	short bytesize;				//bytesize in file (from template)
-	short adj_bytesize;			//bytesize allocated (e.g. +1 for strings for null character
-	short columns;				//multiplicity
+	int bytesize;				//bytesize in file (from template)
+	int adj_bytesize;			//bytesize allocated (e.g. +1 for strings for null character
+	int columns;				//multiplicity
 	unsigned short start_byte;	//record offset
 	char* col_name;				//generated name used for creating davinci structs
 } column_attributes;

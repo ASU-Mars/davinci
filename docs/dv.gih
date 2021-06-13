@@ -871,7 +871,7 @@
 ?interp()
  interp() - Point interpolation
 
- interp(object=VAL,from=VAL,to=VAL)
+ interp(object=VAL,from=VAL,to=VAL, ignore=VAL, type=STRING)
 
 
     The interp() function performs a point interpolation.  OBJECT is 
@@ -887,6 +887,8 @@
     OBJECT is a set of Y values.
     FROM is a corresponding set of X values.
     TO is one or more new X values to look up from the FROM/OBJECT pairs.
+
+    type is one of linear, cubic, nearest, nearest_before.
 
 ?functions fit()
 ?fit()
