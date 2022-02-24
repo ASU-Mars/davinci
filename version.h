@@ -1,8 +1,12 @@
-char *version = "@(#) daVinci Version #2.27";
+char *version = "@(#) daVinci Version #2.28";
 
 #include "build.h"
 
 /*
+  Version 2.28: Thu Feb 24 14:39:00 MST 2022
+  * load_fits() did not handle scaled image data (BSCALE)
+    correctly.
+  
   Version 2.27: Mon Mar  1 11:17:23 MST 2021
   * ff_interp and ff_cinterp changed to doubles.
   * ff_unpack() failed due to usage of short values for

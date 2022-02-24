@@ -260,7 +260,8 @@ Read_FITS_Image(fitsfile *fptr) {
 		return (NULL);
 	}
 
-	fits_get_img_type(fptr, &fits_type, &status);
+	//fits_get_img_type(fptr, &fits_type, &status);
+	fits_get_img_equivtype(fptr, &fits_type, &status);
 	QUERY_FITS_ERROR(status, " getting image type", NULL);
 
 	fits_get_img_size(fptr, dim, size, &status);
@@ -299,6 +300,9 @@ Read_FITS_Image(fitsfile *fptr) {
 		datatype = TDOUBLE;
 		break;
 
+	default:
+		parse_error("Unhandled fits_type: %d\n", fits_type);
+		break;
 	}
 
 	n = (long) ((size_t) size[0]) * ((size_t) size[1]) * ((size_t) size[2]);
